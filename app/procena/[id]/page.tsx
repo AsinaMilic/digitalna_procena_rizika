@@ -52,8 +52,12 @@ function ProcenaWizard() {
             const data = await res.json();
             if (data.success) {
                 setApiMsg("Uspešno ste sačuvali podatke!");
+                // Preusmeri na finalnu stranu nakon 2 sekunde
+                setTimeout(() => {
+                    window.location.href = `/procena/${procenaId}/final`;
+                }, 2000);
             } else {
-                setApiMsg("Desila se greška u snimanju!");
+                setApiMsg(data.error || "Desila se greška u snimanju!");
             }
         } catch {
             setApiMsg("Greška u komunikaciji sa serverom!");

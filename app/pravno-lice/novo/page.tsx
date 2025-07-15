@@ -9,14 +9,37 @@ export default function PravnoLiceForm() {
     const [adresa, setAdresa] = useState("");
     const [loading, setLoading] = useState(false);
 
-    function handleSubmit(e: React.FormEvent) {
+    async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setLoading(true);
-        // Mock API poziv (kasnije: slati na backend/API)
-        setTimeout(() => {
+        
+        try {
+            const response = await fetch('/api/pravno-lice', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    naziv,
+                    pib,
+                    adresa
+                })
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                // Preusmeri na procenu sa stvarnim ID-om
+                router.push(`/procena/${data.procenaId}`);
+            } else {
+                alert(data.error || 'Greška pri čuvanju podataka');
+            }
+        } catch (error) {
+            console.error('Greška:', error);
+            alert('Greška pri komunikaciji sa serverom');
+        } finally {
             setLoading(false);
-            router.push("/procena/123"); // kasnije zameni pravim ID procene
-        }, 700);
+        }
     }
 
     return (

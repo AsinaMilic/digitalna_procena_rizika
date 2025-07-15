@@ -17,11 +17,16 @@ const GRUPE = [
 ];
 
 async function main() {
+    // Prvo obriši postojeće grupe
+    await prisma.grupaRizika.deleteMany({});
+    
+    // Kreiraj nove grupe
     for (let i = 0; i < GRUPE.length; i++) {
-        await prisma.grupaRizika.upsert({
-            where: {naziv: GRUPE[i]},
-            update: {redosled: i + 1},
-            create: {naziv: GRUPE[i], redosled: i + 1},
+        await prisma.grupaRizika.create({
+            data: {
+                naziv: GRUPE[i], 
+                redosled: i + 1
+            }
         });
     }
     console.log('✔️ Seedovano 11 grupa rizika!');
