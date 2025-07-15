@@ -3,40 +3,41 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlserver"
-  url      = env("DATABASE_URL")
+  provider          = "sqlserver"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 model PravnoLice {
-  id        Int              @id @default(autoincrement())
-  naziv     String
-  pib       String
-  adresa    String?
-  procene   ProcenaRizika[]
+  id      Int             @id @default(autoincrement())
+  naziv   String
+  pib     String
+  adresa  String?
+  procene ProcenaRizika[]
 }
 
 model ProcenaRizika {
-  id            Int            @id @default(autoincrement())
-  pravnoLiceId  Int
-  datum         DateTime       @default(now())
-  status        String         @default("u_toku")
-  pravnoLice    PravnoLice     @relation(fields: [pravnoLiceId], references: [id])
-  unosi         UnosRizika[]
+  id           Int          @id @default(autoincrement())
+  pravnoLiceId Int
+  datum        DateTime     @default(now())
+  status       String       @default("u_toku")
+  pravnoLice   PravnoLice   @relation(fields: [pravnoLiceId], references: [id])
+  unosi        UnosRizika[]
 }
 
 model GrupaRizika {
-  id       Int      @id @default(autoincrement())
+  id       Int          @id @default(autoincrement())
   naziv    String
   redosled Int
-  unosi   UnosRizika[]
+  unosi    UnosRizika[]
 }
 
 model UnosRizika {
-  id        Int            @id @default(autoincrement())
+  id        Int           @id @default(autoincrement())
   procenaId Int
   grupaId   Int
   polje     String
   vrednost  String
-  procena   ProcenaRizika  @relation(fields: [procenaId], references: [id])
-  grupa     GrupaRizika    @relation(fields: [grupaId], references: [id])
+  procena   ProcenaRizika @relation(fields: [procenaId], references: [id])
+  grupa     GrupaRizika   @relation(fields: [grupaId], references: [id])
 }

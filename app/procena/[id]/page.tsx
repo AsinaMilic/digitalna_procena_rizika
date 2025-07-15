@@ -63,40 +63,41 @@ function ProcenaWizard() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-2">
-            <div className="bg-white rounded-lg p-6 shadow-xl w-full max-w-2xl border border-gray-200">
+        <div
+            className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-100 px-2 py-10">
+            <div className="bg-white rounded-2xl p-10 shadow-2xl w-full max-w-3xl border border-gray-100">
                 <Stepper step={isFinalStep ? step - 1 : step} setStep={setStep} labels={GRUPE}/>
                 {!isFinalStep ? (
                     <>
-                        <h2 className="text-xl font-bold text-gray-800 mt-6 mb-3 text-center">
+                        <h2 className="text-2xl font-extrabold text-blue-800 mt-8 mb-4 text-center tracking-tight drop-shadow">
                             {GRUPE[step]}
                         </h2>
-                        <form className="flex flex-col gap-4 items-center justify-center py-4">
+                        <form className="flex flex-col gap-6 items-center justify-center py-6">
                             <input
-                                className="w-full p-2 border border-gray-400 rounded text-gray-800 placeholder-gray-500 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition"
+                                className="w-full p-4 border border-blue-200 rounded-lg text-gray-900 placeholder-blue-400 outline-none bg-blue-50 focus:border-purple-400 focus:ring-2 focus:ring-blue-200 shadow transition"
                                 placeholder={`Polje 1 za ovu grupu...`}
                                 value={grupe[step]?.field1 || ""}
                                 onChange={e => handleInputChange("field1", e.target.value)}
                             />
                             <input
-                                className="w-full p-2 border border-gray-400 rounded text-gray-800 placeholder-gray-500 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition"
+                                className="w-full p-4 border border-blue-200 rounded-lg text-gray-900 placeholder-blue-400 outline-none bg-blue-50 focus:border-purple-400 focus:ring-2 focus:ring-blue-200 shadow transition"
                                 placeholder={`Polje 2 za ovu grupu...`}
                                 value={grupe[step]?.field2 || ""}
                                 onChange={e => handleInputChange("field2", e.target.value)}
                             />
                         </form>
-                        <div className="flex justify-between mt-6">
+                        <div className="flex justify-between mt-8 gap-6">
                             <button
                                 disabled={step === 0}
                                 onClick={() => setStep(prev => Math.max(prev - 1, 0))}
-                                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium disabled:bg-gray-100 disabled:text-gray-400"
+                                className="flex-1 px-6 py-3 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-300 text-gray-600 rounded-xl font-semibold shadow transition hover:from-gray-300 hover:to-gray-400 disabled:bg-gray-100 disabled:text-gray-300 disabled:cursor-not-allowed"
                             >
                                 Nazad
                             </button>
                             <button
                                 onClick={() => setStep(prev => prev + 1)}
                                 disabled={step === GRUPE.length - 1 && !(grupe[step]?.field1 || grupe[step]?.field2)}
-                                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold disabled:bg-blue-300"
+                                className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 text-white rounded-xl font-bold shadow transition hover:from-blue-600 hover:to-purple-600 disabled:from-blue-300 disabled:to-purple-400 disabled:cursor-not-allowed"
                             >
                                 {step === GRUPE.length - 1 ? "Pregled" : "Dalje"}
                             </button>
@@ -104,19 +105,20 @@ function ProcenaWizard() {
                     </>
                 ) : (
                     <>
-                        <h2 className="text-xl font-bold text-gray-800 mt-6 mb-3 text-center">Pregled unetih podataka
-                            (dummy)</h2>
-                        <table className="min-w-full border border-gray-300 bg-white rounded-lg shadow-sm my-6">
+                        <h2 className="text-2xl font-extrabold text-blue-800 mt-8 mb-4 text-center drop-shadow">Pregled
+                            unetih podataka</h2>
+                        <table
+                            className="min-w-full border border-blue-200 bg-white rounded-xl shadow my-6 overflow-hidden">
                             <thead>
-                            <tr className="bg-gray-100">
-                                <th className="px-4 py-2 border-b">Grupa</th>
-                                <th className="px-4 py-2 border-b">Polje 1</th>
-                                <th className="px-4 py-2 border-b">Polje 2</th>
+                            <tr className="bg-gradient-to-r from-blue-50 to-purple-50">
+                                <th className="px-4 py-2 border-b text-blue-700 font-semibold">Grupa</th>
+                                <th className="px-4 py-2 border-b text-blue-700 font-semibold">Polje 1</th>
+                                <th className="px-4 py-2 border-b text-blue-700 font-semibold">Polje 2</th>
                             </tr>
                             </thead>
                             <tbody>
                             {GRUPE.map((g, idx) => (
-                                <tr key={g}>
+                                <tr key={g} className="even:bg-blue-50">
                                     <td className="px-4 py-2 border-b text-left font-medium">{g}</td>
                                     <td className="px-4 py-2 border-b text-left">{grupe[idx].field1}</td>
                                     <td className="px-4 py-2 border-b text-left">{grupe[idx].field2}</td>
@@ -125,7 +127,7 @@ function ProcenaWizard() {
                             </tbody>
                         </table>
                         <button
-                            className="mt-8 w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 disabled:bg-green-300"
+                            className="mt-8 w-full bg-gradient-to-r from-green-500 via-lime-500 to-emerald-500 text-white font-bold py-4 rounded-xl shadow hover:from-green-600 hover:to-emerald-600 transition focus:outline-none focus:ring-4 focus:ring-green-200 disabled:from-green-300 disabled:to-emerald-300 disabled:cursor-not-allowed"
                             onClick={handleSubmitToBackend}
                             disabled={loading}
                         >
@@ -133,7 +135,7 @@ function ProcenaWizard() {
                         </button>
                         {apiMsg && (
                             <div
-                                className={`mt-6 p-3 rounded-lg text-center ${apiMsg.startsWith('Uspe') ? "bg-green-100 text-green-900" : "bg-red-100 text-red-700"}`}>
+                                className={`mt-8 p-4 rounded-xl text-center text-lg shadow-lg ${apiMsg.startsWith('Uspe') ? "bg-green-100 text-green-900" : "bg-red-100 text-red-700"}`}>
                                 {apiMsg}
                             </div>
                         )}

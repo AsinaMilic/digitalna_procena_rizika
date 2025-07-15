@@ -48,7 +48,7 @@ export async function createUsersTable() {
       SELECT COUNT(*) as count FROM korisnici WHERE je_admin = 1
     `);
     if (adminExists.recordset[0].count === 0) {
-        const bcrypt = require('bcryptjs');
+        const bcrypt = await import('bcryptjs');
         const adminPassword = await bcrypt.hash('admin123', 10);
         await pool.request().query(`
         INSERT INTO korisnici (email, lozinka, ime, prezime, status, je_admin)
