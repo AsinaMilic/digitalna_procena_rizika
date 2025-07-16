@@ -17,12 +17,14 @@ model PravnoLice {
 }
 
 model ProcenaRizika {
-  id           Int          @id @default(autoincrement())
-  pravnoLiceId Int
-  datum        DateTime     @default(now())
-  status       String       @default("u_toku")
-  pravnoLice   PravnoLice   @relation(fields: [pravnoLiceId], references: [id])
-  unosi        UnosRizika[]
+  id            Int             @id @default(autoincrement())
+  pravnoLiceId  Int
+  datum         DateTime        @default(now())
+  status        String          @default("u_toku")
+  pravnoLice    PravnoLice      @relation(fields: [pravnoLiceId], references: [id])
+  unosi         UnosRizika[]
+  riskSelections RiskSelection[]
+  riskRegister  RiskRegister[]
 }
 
 model GrupaRizika {
@@ -40,4 +42,38 @@ model UnosRizika {
   vrednost  String
   procena   ProcenaRizika @relation(fields: [procenaId], references: [id])
   grupa     GrupaRizika   @relation(fields: [grupaId], references: [id])
+}
+
+model RiskSelection {
+  id          Int           @id @default(autoincrement())
+  procenaId   Int
+  riskId      String
+  dangerLevel Int
+  description String        @default("")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  procena     ProcenaRizika @relation(fields: [procenaId], references: [id])
+
+  @@unique([procenaId, riskId])
+}
+
+model RiskRegister {
+  id                  Int           @id @default(autoincrement())
+  procenaId           Int
+  riskId              String
+  description         String
+  dangerLevel         Int
+  exposure            Int
+  vulnerability       Int
+  consequences        Int
+  probability         Int
+  riskLevel           Int
+  category            String
+  acceptability       String
+  recommendedMeasures String
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  procena             ProcenaRizika @relation(fields: [procenaId], references: [id])
+
+  @@unique([procenaId, riskId])
 }

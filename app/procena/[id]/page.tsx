@@ -1,150 +1,139 @@
 "use client";
-import {useState} from "react";
-import {ProcenaProvider, useProcena} from "./ProcenaContext";
-import Stepper from "../../components/Stepper";
+import {useState, useEffect} from "react";
+import {useParams} from "next/navigation";
+import RiskAssessmentTable from "../../components/RiskAssessmentTable";
 
-const GRUPE = [
-    "Organizacija i rukovodstvo",
-    "Radno okruženje",
-    "Radni procesi",
-    "Tehnička sredstva",
-    "Fizička sigurnost",
-    "Zdravlje na radu",
-    "Ekologija",
-    "Informaciona sigurnost",
-    "Pravna usklađenost",
-    "Finansijski rizici",
-    "Reputacioni rizici"
-];
-
-export default function ProcenaWrapper() {
-    return (
-        <ProcenaProvider>
-            <ProcenaWizard/>
-        </ProcenaProvider>
-    );
+interface RiskSelection {
+    risk_id: string;
+    danger_level: number;
+    description: string;
 }
 
-function ProcenaWizard() {
-    const [step, setStep] = useState(0);
-    const {grupe, setGrupaData} = useProcena();
-    const isFinalStep = step === GRUPE.length;
+export default function ProcenaPage() {
+    const params = useParams();
+    const [selections, setSelections] = useState<RiskSelection[]>([]);
     const [loading, setLoading] = useState(false);
-    const [apiMsg, setApiMsg] = useState<string | null>(null);
+    const [message, setMessage] = useState<string | null>(null);
+    const procenaId = params.id as string;
 
-    function handleInputChange(field: string, value: string) {
-        // Izmeni state za tekuću grupu (korak)
-        const data = {...grupe[step], [field]: value};
-        setGrupaData(step, data);
-    }
+    // Učitaj postojeće selekcije
+    useEffect(() => {
+        async function loadSelections() {
+            try {
+                const response = await fetch(`/api/procena/${procenaId}/risk-selection`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setSelections(data.map((item: any) => ({
+                        risk_id: item.riskId,
+                        danger_level: item.dangerLevel,
+                        description: item.description
+                    })));
+                }
+            } catch (error) {
+                console.error('Greška pri učitavanju selekcija:', error);
+            }
+        }
 
-    async function handleSubmitToBackend() {
+        if (procenaId) {
+            loadSelections();
+        }
+    }, [procenaId]);
+
+    const handleSelectionChange = (newSelections: RiskSelection[]) => {
+        setSelections(newSelections);
+    };
+
+    const handleGenerateRiskMatrix = async () => {
+        if (selections.length === 0) {
+            setMessage("Molimo vas da prvo izaberete vrednosti u tabeli.");
+            return;
+        }
+
         setLoading(true);
-        setApiMsg(null);
+        setMessage(null);
+
         try {
-            // Dohvatanje ID iz url parametara
-            const procenaId = window.location.pathname.split("/")[2];
-            const res = await fetch(`/api/procena/${procenaId}/unos`, {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({grupe})
+            const response = await fetch(`/api/procena/${procenaId}/generate-matrix`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({selections})
             });
-            const data = await res.json();
+
+            const data = await response.json();
+            
             if (data.success) {
-                setApiMsg("Uspešno ste sačuvali podatke!");
+                setMessage("Успешно генерисана матрица ризика!");
                 // Preusmeri na finalnu stranu nakon 2 sekunde
                 setTimeout(() => {
                     window.location.href = `/procena/${procenaId}/final`;
                 }, 2000);
             } else {
-                setApiMsg(data.error || "Desila se greška u snimanju!");
+                setMessage(data.error || "Greška pri generisanju matrice ризика");
             }
-        } catch {
-            setApiMsg("Greška u komunikaciji sa serverom!");
+        } catch (error) {
+            console.error('Greška:', error);
+            setMessage("Greška pri komunikaciji sa serverom");
         } finally {
             setLoading(false);
         }
-    }
+    };
 
     return (
-        <div
-            className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-100 px-2 py-10">
-            <div className="bg-white rounded-2xl p-10 shadow-2xl w-full max-w-3xl border border-gray-100">
-                <Stepper step={isFinalStep ? step - 1 : step} setStep={setStep} labels={GRUPE}/>
-                {!isFinalStep ? (
-                    <>
-                        <h2 className="text-2xl font-extrabold text-blue-800 mt-8 mb-4 text-center tracking-tight drop-shadow">
-                            {GRUPE[step]}
-                        </h2>
-                        <form className="flex flex-col gap-6 items-center justify-center py-6">
-                            <input
-                                className="w-full p-4 border border-blue-200 rounded-lg text-gray-900 placeholder-blue-400 outline-none bg-blue-50 focus:border-purple-400 focus:ring-2 focus:ring-blue-200 shadow transition"
-                                placeholder={`Polje 1 za ovu grupu...`}
-                                value={grupe[step]?.field1 || ""}
-                                onChange={e => handleInputChange("field1", e.target.value)}
-                            />
-                            <input
-                                className="w-full p-4 border border-blue-200 rounded-lg text-gray-900 placeholder-blue-400 outline-none bg-blue-50 focus:border-purple-400 focus:ring-2 focus:ring-blue-200 shadow transition"
-                                placeholder={`Polje 2 za ovu grupu...`}
-                                value={grupe[step]?.field2 || ""}
-                                onChange={e => handleInputChange("field2", e.target.value)}
-                            />
-                        </form>
-                        <div className="flex justify-between mt-8 gap-6">
-                            <button
-                                disabled={step === 0}
-                                onClick={() => setStep(prev => Math.max(prev - 1, 0))}
-                                className="flex-1 px-6 py-3 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-300 text-gray-600 rounded-xl font-semibold shadow transition hover:from-gray-300 hover:to-gray-400 disabled:bg-gray-100 disabled:text-gray-300 disabled:cursor-not-allowed"
-                            >
-                                Nazad
-                            </button>
-                            <button
-                                onClick={() => setStep(prev => prev + 1)}
-                                disabled={step === GRUPE.length - 1 && !(grupe[step]?.field1 || grupe[step]?.field2)}
-                                className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 text-white rounded-xl font-bold shadow transition hover:from-blue-600 hover:to-purple-600 disabled:from-blue-300 disabled:to-purple-400 disabled:cursor-not-allowed"
-                            >
-                                {step === GRUPE.length - 1 ? "Pregled" : "Dalje"}
-                            </button>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-100 py-8 px-4">
+            <div className="max-w-7xl mx-auto">
+                {/* Header */}
+                <div className="text-center mb-8">
+                    <h1 className="text-3xl font-bold text-blue-800 mb-2">
+                        Процена ризика - SRPS A.L2.003:2025
+                    </h1>
+                    <p className="text-blue-600">
+                        Изаберите одговарајуће вредности величине опасности за сваки захтев
+                    </p>
+                </div>
+
+                {/* Risk Assessment Table */}
+                <RiskAssessmentTable 
+                    procenaId={procenaId}
+                    onSelectionChange={handleSelectionChange}
+                />
+
+                {/* Action Buttons */}
+                <div className="mt-8 text-center space-y-4">
+                    {message && (
+                        <div className={`p-4 rounded-xl text-center text-lg shadow-lg ${
+                            message.includes('Успешно') || message.includes('успешно') 
+                                ? "bg-green-100 text-green-900" 
+                                : "bg-red-100 text-red-700"
+                        }`}>
+                            {message}
                         </div>
-                    </>
-                ) : (
-                    <>
-                        <h2 className="text-2xl font-extrabold text-blue-800 mt-8 mb-4 text-center drop-shadow">Pregled
-                            unetih podataka</h2>
-                        <table
-                            className="min-w-full border border-blue-200 bg-white rounded-xl shadow my-6 overflow-hidden">
-                            <thead>
-                            <tr className="bg-gradient-to-r from-blue-50 to-purple-50">
-                                <th className="px-4 py-2 border-b text-blue-700 font-semibold">Grupa</th>
-                                <th className="px-4 py-2 border-b text-blue-700 font-semibold">Polje 1</th>
-                                <th className="px-4 py-2 border-b text-blue-700 font-semibold">Polje 2</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {GRUPE.map((g, idx) => (
-                                <tr key={g} className="even:bg-blue-50">
-                                    <td className="px-4 py-2 border-b text-left font-medium">{g}</td>
-                                    <td className="px-4 py-2 border-b text-left">{grupe[idx].field1}</td>
-                                    <td className="px-4 py-2 border-b text-left">{grupe[idx].field2}</td>
-                                </tr>
-                            ))}
-                            </tbody>
-                        </table>
+                    )}
+
+                    <div className="space-x-4">
                         <button
-                            className="mt-8 w-full bg-gradient-to-r from-green-500 via-lime-500 to-emerald-500 text-white font-bold py-4 rounded-xl shadow hover:from-green-600 hover:to-emerald-600 transition focus:outline-none focus:ring-4 focus:ring-green-200 disabled:from-green-300 disabled:to-emerald-300 disabled:cursor-not-allowed"
-                            onClick={handleSubmitToBackend}
-                            disabled={loading}
+                            onClick={handleGenerateRiskMatrix}
+                            disabled={loading || selections.length === 0}
+                            className="bg-gradient-to-r from-green-500 via-lime-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105 disabled:from-green-300 disabled:to-emerald-300 disabled:cursor-not-allowed disabled:transform-none"
                         >
-                            {loading ? "Čuvanje..." : "Završi i prikaži finalnu tabelu"}
+                            {loading ? "Генерисање..." : "Генериши матрицу ризика и заврши"}
                         </button>
-                        {apiMsg && (
-                            <div
-                                className={`mt-8 p-4 rounded-xl text-center text-lg shadow-lg ${apiMsg.startsWith('Uspe') ? "bg-green-100 text-green-900" : "bg-red-100 text-red-700"}`}>
-                                {apiMsg}
-                            </div>
-                        )}
-                    </>
-                )}
+
+                        <button
+                            onClick={() => window.history.back()}
+                            className="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105"
+                        >
+                            ← Назад
+                        </button>
+                    </div>
+
+                    {selections.length > 0 && (
+                        <div className="mt-4 text-sm text-blue-600">
+                            Изабрано је {selections.length} вредности
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

@@ -15,14 +15,10 @@ export async function GET(req: Request, {params}: {params: {id: string}}) {
             where: {id: procenaId},
             include: {
                 pravnoLice: true,
-                unosi: {
-                    include: {
-                        grupa: true
-                    },
+                riskSelections: true,
+                riskRegister: {
                     orderBy: {
-                        grupa: {
-                            redosled: 'asc'
-                        }
+                        riskId: 'asc'
                     }
                 }
             }
@@ -32,24 +28,6 @@ export async function GET(req: Request, {params}: {params: {id: string}}) {
             return NextResponse.json({error: "Procena ne postoji"}, {status: 404});
         }
 
-        // Grupiši unose po grupama za lakše prikazivanje
-        const grupeMap = new Map();
-        procena.unosi.forEach(unos => {
-            const grupaNaziv = unos.grupa.naziv;
-            if (!grupeMap.has(grupaNaziv)) {
-                grupeMap.set(grupaNaziv, {
-                    naziv: grupaNaziv,
-                    redosled: unos.grupa.redosled,
-                    field1: '',
-                    field2: ''
-                });
-            }
-            const grupa = grupeMap.get(grupaNaziv);
-            grupa[unos.polje] = unos.vrednost;
-        });
-
-        const finalniPodaci = Array.from(grupeMap.values()).sort((a, b) => a.redosled - b.redosled);
-
         return NextResponse.json({
             procena: {
                 id: procena.id,
@@ -57,7 +35,8 @@ export async function GET(req: Request, {params}: {params: {id: string}}) {
                 status: procena.status,
                 pravnoLice: procena.pravnoLice
             },
-            grupe: finalniPodaci
+            riskSelections: procena.riskSelections,
+            riskRegister: procena.riskRegister
         });
     } catch (error) {
         console.error("Greška pri dohvatanju finalne procene:", error);
