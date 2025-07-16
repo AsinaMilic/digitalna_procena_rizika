@@ -1,71 +1,65 @@
 import {NextResponse} from "next/server";
-import {PrismaClient} from "@prisma/client";
+import {getDbConnection} from "../../../../../lib/db";
 
-const prisma = new PrismaClient();
-
-export async function POST(req: Request, {params}: {params: {id: string}}) {
+export async function POST(req: Request, {params}: {params: Promise<{id: string}>}) {
     try {
-        const procenaId = parseInt(params.id);
+        const {id} = await params;
+        const procenaId = parseInt(id);
         const {grupe} = await req.json();
 
         if (!procenaId || !grupe) {
             return NextResponse.json({error: "Nedostaju potrebni podaci"}, {status: 400});
         }
 
-        // Proveri da li procena postoji
-        const procena = await prisma.procenaRizika.findUnique({
-            where: {id: procenaId}
-        });
+        const pool = await getDbConnection();
 
-        if (!procena) {
+        // Check if procena exists
+        const procenaCheck = await pool.request()
+            .input('procenaId', procenaId)
+            .query('SELECT id FROM ProcenaRizika WHERE id = @procenaId');
+
+        if (procenaCheck.recordset.length === 0) {
             return NextResponse.json({error: "Procena ne postoji"}, {status: 404});
         }
 
-        // Obriši postojeće unose za ovu procenu
-        await prisma.unosRizika.deleteMany({
-            where: {procenaId}
-        });
+        // Delete existing entries for this procena
+        await pool.request()
+            .input('procenaId', procenaId)
+            .query('DELETE FROM UnosRizika WHERE procenaId = @procenaId');
 
-        // Dohvati grupe rizika iz baze
-        const grupeRizika = await prisma.grupaRizika.findMany({
-            orderBy: {redosled: 'asc'}
-        });
+        // Get risk groups from database
+        const grupeRizikaResult = await pool.request()
+            .query('SELECT * FROM GrupaRizika ORDER BY redosled ASC');
+        
+        const grupeRizika = grupeRizikaResult.recordset;
 
-        // Kreiraj nove unose
-        const unosiData = [];
+        // Create new entries
         for (let i = 0; i < grupe.length && i < grupeRizika.length; i++) {
             const grupa = grupe[i];
             const grupaRizika = grupeRizika[i];
             
             if (grupa.field1) {
-                unosiData.push({
-                    procenaId,
-                    grupaId: grupaRizika.id,
-                    polje: "field1",
-                    vrednost: grupa.field1
-                });
+                await pool.request()
+                    .input('procenaId', procenaId)
+                    .input('grupaId', grupaRizika.id)
+                    .input('polje', 'field1')
+                    .input('vrednost', grupa.field1)
+                    .query('INSERT INTO UnosRizika (procenaId, grupaId, polje, vrednost) VALUES (@procenaId, @grupaId, @polje, @vrednost)');
             }
             if (grupa.field2) {
-                unosiData.push({
-                    procenaId,
-                    grupaId: grupaRizika.id,
-                    polje: "field2",
-                    vrednost: grupa.field2
-                });
+                await pool.request()
+                    .input('procenaId', procenaId)
+                    .input('grupaId', grupaRizika.id)
+                    .input('polje', 'field2')
+                    .input('vrednost', grupa.field2)
+                    .query('INSERT INTO UnosRizika (procenaId, grupaId, polje, vrednost) VALUES (@procenaId, @grupaId, @polje, @vrednost)');
             }
         }
 
-        if (unosiData.length > 0) {
-            await prisma.unosRizika.createMany({
-                data: unosiData
-            });
-        }
-
-        // Ažuriraj status procene
-        await prisma.procenaRizika.update({
-            where: {id: procenaId},
-            data: {status: "zavrsena"}
-        });
+        // Update procena status
+        await pool.request()
+            .input('procenaId', procenaId)
+            .query('UPDATE ProcenaRizika SET status = \'zavrsena\' WHERE id = @procenaId');
 
         return NextResponse.json({success: true, message: "Podaci su uspešno sačuvani"});
     } catch (error) {
@@ -74,34 +68,72 @@ export async function POST(req: Request, {params}: {params: {id: string}}) {
     }
 }
 
-export async function GET(req: Request, {params}: {params: {id: string}}) {
+export async function GET(req: Request, {params}: {params: Promise<{id: string}>}) {
     try {
-        const procenaId = parseInt(params.id);
+        const {id} = await params;
+        const procenaId = parseInt(id);
 
         if (!procenaId) {
             return NextResponse.json({error: "Nevaljan ID procene"}, {status: 400});
         }
 
-        const procena = await prisma.procenaRizika.findUnique({
-            where: {id: procenaId},
-            include: {
-                pravnoLice: true,
-                unosi: {
-                    include: {
-                        grupa: true
-                    },
-                    orderBy: {
-                        grupa: {
-                            redosled: 'asc'
-                        }
-                    }
-                }
-            }
-        });
+        const pool = await getDbConnection();
 
-        if (!procena) {
+        // Get procena with pravno lice
+        const procenaResult = await pool.request()
+            .input('procenaId', procenaId)
+            .query(`
+                SELECT 
+                    pr.id, pr.datum, pr.status, pr.pravnoLiceId,
+                    pl.naziv, pl.pib, pl.adresa
+                FROM ProcenaRizika pr
+                JOIN PravnoLice pl ON pr.pravnoLiceId = pl.id
+                WHERE pr.id = @procenaId
+            `);
+
+        if (procenaResult.recordset.length === 0) {
             return NextResponse.json({error: "Procena ne postoji"}, {status: 404});
         }
+
+        const procenaData = procenaResult.recordset[0];
+
+        // Get unosi with grupa data
+        const unosiResult = await pool.request()
+            .input('procenaId', procenaId)
+            .query(`
+                SELECT 
+                    ur.id, ur.procenaId, ur.grupaId, ur.polje, ur.vrednost,
+                    gr.naziv as grupaNaziv, gr.redosled
+                FROM UnosRizika ur
+                JOIN GrupaRizika gr ON ur.grupaId = gr.id
+                WHERE ur.procenaId = @procenaId
+                ORDER BY gr.redosled ASC
+            `);
+
+        const procena = {
+            id: procenaData.id,
+            datum: procenaData.datum,
+            status: procenaData.status,
+            pravnoLiceId: procenaData.pravnoLiceId,
+            pravnoLice: {
+                id: procenaData.pravnoLiceId,
+                naziv: procenaData.naziv,
+                pib: procenaData.pib,
+                adresa: procenaData.adresa
+            },
+            unosi: unosiResult.recordset.map(unos => ({
+                id: unos.id,
+                procenaId: unos.procenaId,
+                grupaId: unos.grupaId,
+                polje: unos.polje,
+                vrednost: unos.vrednost,
+                grupa: {
+                    id: unos.grupaId,
+                    naziv: unos.grupaNaziv,
+                    redosled: unos.redosled
+                }
+            }))
+        };
 
         return NextResponse.json(procena);
     } catch (error) {

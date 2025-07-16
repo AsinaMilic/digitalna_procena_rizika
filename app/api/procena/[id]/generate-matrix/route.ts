@@ -1,32 +1,32 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { getDbConnection } from "../../../../../lib/db";
 
-const prisma = new PrismaClient();
-
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
-        const procenaId = parseInt(params.id);
+        const { id } = await params;
+        const procenaId = parseInt(id);
         const { selections } = await req.json();
 
         if (!procenaId || !selections || selections.length === 0) {
             return NextResponse.json({ error: "Nedostaju potrebni podaci" }, { status: 400 });
         }
 
-        // Proveri da li procena postoji
-        const procena = await prisma.procenaRizika.findUnique({
-            where: { id: procenaId }
-        });
+        const pool = await getDbConnection();
 
-        if (!procena) {
+        // Check if procena exists
+        const procenaCheck = await pool.request()
+            .input('procenaId', procenaId)
+            .query('SELECT id FROM ProcenaRizika WHERE id = @procenaId');
+
+        if (procenaCheck.recordset.length === 0) {
             return NextResponse.json({ error: "Procena ne postoji" }, { status: 404 });
         }
 
-        // Generiši registar rizika (Prilog Lj) na osnovu selekcija
-        const riskRegister = selections.map((selection: any, index: number) => ({
+        // Generate risk register based on selections
+        const riskRegister = selections.map((selection: any) => ({
             riskId: selection.risk_id,
             description: selection.description,
             dangerLevel: selection.danger_level,
-            // Simulacija dodatnih parametara za analizu rizika
             exposure: calculateExposure(selection.danger_level),
             vulnerability: calculateVulnerability(selection.danger_level),
             consequences: calculateConsequences(selection.danger_level),
@@ -34,51 +34,76 @@ export async function POST(req: Request, { params }: { params: { id: string } })
             riskLevel: calculateRiskLevel(selection.danger_level)
         }));
 
-        // Sačuvaj generirani registar u bazu kao JSON
-        await prisma.procenaRizika.update({
-            where: { id: procenaId },
-            data: {
-                status: "zavrsena",
-                // Možemo dodati polje za čuvanje registra rizika
-            }
-        });
+        // Update procena status to completed
+        await pool.request()
+            .input('procenaId', procenaId)
+            .query('UPDATE ProcenaRizika SET status = \'zavrsena\' WHERE id = @procenaId');
 
-        // Kreiraj unose u tabelu za registar rizika (možemo proširiti schema kasnije)
+        // Create/update risk register entries
         for (const risk of riskRegister) {
-            await prisma.riskRegister.upsert({
-                where: {
-                    procenaId_riskId: {
-                        procenaId: procenaId,
-                        riskId: risk.riskId
-                    }
-                },
-                update: {
-                    description: risk.description,
-                    dangerLevel: risk.dangerLevel,
-                    exposure: risk.exposure,
-                    vulnerability: risk.vulnerability,
-                    consequences: risk.consequences,
-                    probability: risk.probability,
-                    riskLevel: risk.riskLevel,
-                    category: getRiskCategory(risk.riskLevel),
-                    acceptability: getRiskAcceptability(risk.riskLevel),
-                    recommendedMeasures: getRecommendedMeasures(risk.riskLevel)
-                },
-                create: {
-                    procenaId: procenaId,
-                    riskId: risk.riskId,
-                    description: risk.description,
-                    dangerLevel: risk.dangerLevel,
-                    exposure: risk.exposure,
-                    vulnerability: risk.vulnerability,
-                    consequences: risk.consequences,
-                    probability: risk.probability,
-                    riskLevel: risk.riskLevel,
-                    category: getRiskCategory(risk.riskLevel),
-                    acceptability: getRiskAcceptability(risk.riskLevel),
-                    recommendedMeasures: getRecommendedMeasures(risk.riskLevel)
-                }
-            });
+            // Check if risk register entry exists
+            const existingRisk = await pool.request()
+                .input('procenaId', procenaId)
+                .input('riskId', risk.riskId)
+                .query('SELECT id FROM RiskRegister WHERE procenaId = @procenaId AND riskId = @riskId');
+
+            if (existingRisk.recordset.length > 0) {
+                // Update existing
+                await pool.request()
+                    .input('procenaId', procenaId)
+                    .input('riskId', risk.riskId)
+                    .input('description', risk.description)
+                    .input('dangerLevel', risk.dangerLevel)
+                    .input('exposure', risk.exposure)
+                    .input('vulnerability', risk.vulnerability)
+                    .input('consequences', risk.consequences)
+                    .input('probability', risk.probability)
+                    .input('riskLevel', risk.riskLevel)
+                    .input('category', getRiskCategory(risk.riskLevel))
+                    .input('acceptability', getRiskAcceptability(risk.riskLevel))
+                    .input('recommendedMeasures', getRecommendedMeasures(risk.riskLevel))
+                    .query(`
+                        UPDATE RiskRegister SET 
+                            description = @description,
+                            dangerLevel = @dangerLevel,
+                            exposure = @exposure,
+                            vulnerability = @vulnerability,
+                            consequences = @consequences,
+                            probability = @probability,
+                            riskLevel = @riskLevel,
+                            category = @category,
+                            acceptability = @acceptability,
+                            recommendedMeasures = @recommendedMeasures,
+                            updatedAt = GETDATE()
+                        WHERE procenaId = @procenaId AND riskId = @riskId
+                    `);
+            } else {
+                // Create new
+                await pool.request()
+                    .input('procenaId', procenaId)
+                    .input('riskId', risk.riskId)
+                    .input('description', risk.description)
+                    .input('dangerLevel', risk.dangerLevel)
+                    .input('exposure', risk.exposure)
+                    .input('vulnerability', risk.vulnerability)
+                    .input('consequences', risk.consequences)
+                    .input('probability', risk.probability)
+                    .input('riskLevel', risk.riskLevel)
+                    .input('category', getRiskCategory(risk.riskLevel))
+                    .input('acceptability', getRiskAcceptability(risk.riskLevel))
+                    .input('recommendedMeasures', getRecommendedMeasures(risk.riskLevel))
+                    .query(`
+                        INSERT INTO RiskRegister (
+                            procenaId, riskId, description, dangerLevel, exposure, vulnerability,
+                            consequences, probability, riskLevel, category, acceptability,
+                            recommendedMeasures, createdAt, updatedAt
+                        ) VALUES (
+                            @procenaId, @riskId, @description, @dangerLevel, @exposure, @vulnerability,
+                            @consequences, @probability, @riskLevel, @category, @acceptability,
+                            @recommendedMeasures, GETDATE(), GETDATE()
+                        )
+                    `);
+            }
         }
 
         return NextResponse.json({

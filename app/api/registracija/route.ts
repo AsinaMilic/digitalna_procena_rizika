@@ -1,15 +1,15 @@
-import {NextRequest, NextResponse} from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import {getDbConnection, createUsersTable} from '../../../lib/db';
+import { getDbConnection, createUsersTable } from '../../../lib/db';
 
 export async function POST(request: NextRequest) {
     try {
-        const {email, lozinka, ime, prezime} = await request.json();
+        const { email, lozinka, ime, prezime } = await request.json();
 
         if (!email || !lozinka || !ime || !prezime) {
             return NextResponse.json(
-                {greška: 'Sva polja su obavezna'},
-                {status: 400}
+                { greška: 'Sva polja su obavezna' },
+                { status: 400 }
             );
         }
 
@@ -26,8 +26,8 @@ export async function POST(request: NextRequest) {
 
         if (existingUser.recordset.length > 0) {
             return NextResponse.json(
-                {greška: 'Korisnik sa ovim email-om već postoji'},
-                {status: 400}
+                { greška: 'Korisnik sa ovim email-om već postoji' },
+                { status: 400 }
             );
         }
 
@@ -47,14 +47,14 @@ export async function POST(request: NextRequest) {
       `);
 
         return NextResponse.json(
-            {poruka: 'Uspešno ste se registrovali! Sačekajte odobrenje administratora.'},
-            {status: 201}
+            { poruka: 'Uspešno ste se registrovali! Sačekajte odobrenje administratora.' },
+            { status: 201 }
         );
     } catch (error) {
         console.error('Greška pri registraciji:', error);
         return NextResponse.json(
-            {greška: 'Došlo je do greške pri registraciji'},
-            {status: 500}
+            { greška: 'Došlo je do greške pri registraciji' },
+            { status: 500 }
         );
     }
 }

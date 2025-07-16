@@ -7,17 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "curl -X POST http://localhost:3000/api/seed || echo 'Make sure the dev server is running with: npm run dev'"
   },
   "dependencies": {
-    "@prisma/client": "^6.11.1",
     "bcryptjs": "^3.0.2",
     "jsonwebtoken": "^9.0.2",
     "mssql": "^11.0.1",
     "next": "15.3.5",
-    "prisma": "^6.11.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

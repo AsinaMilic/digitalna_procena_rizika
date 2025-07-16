@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { RiskGroupData } from "../data/riskGroups";
 
 interface RiskSelection {
     risk_id: string;
@@ -9,81 +10,13 @@ interface RiskSelection {
 
 interface RiskAssessmentTableProps {
     procenaId: string;
+    riskGroupData: RiskGroupData;
     onSelectionChange?: (selections: RiskSelection[]) => void;
 }
 
-const RISK_DATA = [
-    {
-        id: "1.1",
-        title: "Постојање правилника о организацији и систематизацији послова",
-        items: [
-            {
-                id: "1.1.1",
-                levels: {
-                    5: "1. Организација има више од 10 запослених и не поседује Правилник о организацији и систематизацији послова.",
-                    4: "",
-                    3: "",
-                    2: "",
-                    1: "1. Организација има више од 10 запослених и има Правилник о организацији и систематизацији радних места са тачно утврђеним одговорностима и радним задацима запослених."
-                }
-            },
-            {
-                id: "1.1.2",
-                levels: {
-                    5: "",
-                    4: "",
-                    3: "",
-                    2: "2. Правилник се делимично ажурира сходно изменама радних позиција.",
-                    1: "2. Правилник се ажурира сходно изменама радних позиција."
-                }
-            },
-            {
-                id: "1.1.3",
-                levels: {
-                    5: "",
-                    4: "",
-                    3: "",
-                    2: "",
-                    1: "3. Радне позиције из правилника су адекватне и у складу са делатношћу организације."
-                }
-            }
-        ]
-    },
-    {
-        id: "1.2",
-        title: "Постојање плана набавки/план јавних набавки добара, радова и услуга са тачно утврђеним описима, роком реализације и финансијским износима",
-        items: [
-            {
-                id: "1.2.1",
-                levels: {
-                    5: "1. Организација је обухваћена Законом о јавним набавкама и не поседује план набавки/план јавних набавки добара, радова и услуга.",
-                    4: "1. План набавки постоји али није детаљан или се не поштује у потпуности.",
-                    3: "1. План набавки постоји али се повремено мења током године.",
-                    2: "1. План набавки постоји и углавном се поштује.",
-                    1: "1. План набавки/јавних набавки постоји, детаљан је, редовно се ажурира и доследно спроводи."
-                }
-            }
-        ]
-    },
-    {
-        id: "1.3",
-        title: "Постојање ажурне евиденције о насталим штетама као последицама техничких ризика у пословању",
-        items: [
-            {
-                id: "1.3.1",
-                levels: {
-                    5: "1. Организација не поседује евиденцију о штетама као последицама техничких ризика из 'Извештаја ревизора'.",
-                    4: "1. Организација поседује евиденцију о штетама као последицама техничких ризика из 'Извештаја ревизора'.",
-                    3: "1. Организација поседује евиденцију о штетама као последицама техничких ризика из 'Извештаја ревизора'.",
-                    2: "1. Организација поседује евиденцију о штетама као последицама техничких ризика из 'Извештаја ревизора'.",
-                    1: "1. Организација поседује евиденцију о штетама као последицама техничких ризика из 'Извештаја ревизора'."
-                }
-            }
-        ]
-    }
-];
 
-export default function RiskAssessmentTable({ procenaId, onSelectionChange }: RiskAssessmentTableProps) {
+
+export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelectionChange }: RiskAssessmentTableProps) {
     const [selections, setSelections] = useState<Map<string, RiskSelection>>(new Map());
     const [loading, setLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
@@ -122,7 +55,7 @@ export default function RiskAssessmentTable({ procenaId, onSelectionChange }: Ri
         if (procenaId) {
             loadExistingSelections();
         }
-    }, [procenaId, onSelectionChange]);
+    }, [procenaId, onSelectionChange]); // onSelectionChange is now stable thanks to useCallback
 
     const handleCellClick = async (riskId: string, dangerLevel: number, description: string) => {
         const newSelection: RiskSelection = {
@@ -164,7 +97,7 @@ export default function RiskAssessmentTable({ procenaId, onSelectionChange }: Ri
 
     const getCellClass = (riskId: string, level: number, hasContent: boolean) => {
         const isSelected = selections.get(riskId)?.danger_level === level;
-        const baseClass = "border border-gray-800 p-3 text-xs align-top cursor-pointer transition-colors";
+        const baseClass = "border border-gray-800 p-3 text-xs align-top cursor-pointer transition-colors text-black";
 
         if (!hasContent) {
             return `${baseClass} bg-gray-50`;
@@ -207,8 +140,11 @@ export default function RiskAssessmentTable({ procenaId, onSelectionChange }: Ri
     return (
         <div className="bg-white rounded-2xl p-8 shadow-xl border border-blue-100">
             <h2 className="text-2xl font-bold text-blue-800 mb-6 text-center">
-                Табела за процену ризика - Прилог В
+                Табела за процену ризика - {riskGroupData.name}
             </h2>
+            <p className="text-blue-600 text-center mb-6">
+                {riskGroupData.description}
+            </p>
 
             {loading && (
                 <div className="mb-4 p-3 bg-blue-100 text-blue-800 rounded-lg text-center">
@@ -221,32 +157,32 @@ export default function RiskAssessmentTable({ procenaId, onSelectionChange }: Ri
                     {/* Header */}
                     <thead>
                         <tr className="bg-gray-200">
-                            <th className="border border-gray-800 p-3 text-sm font-bold text-center w-20">
+                            <th className="border border-gray-800 p-3 text-sm font-bold text-center w-20 text-black">
                                 Р.<br />бр.
                             </th>
-                            <th className="border border-gray-800 p-3 text-sm font-bold text-center w-60">
+                            <th className="border border-gray-800 p-3 text-sm font-bold text-center w-60 text-black">
                                 Захтев за процену<br />ризика
                             </th>
-                            <th className="border border-gray-800 p-3 text-sm font-bold text-center bg-gray-300" colSpan={5}>
+                            <th className="border border-gray-800 p-3 text-sm font-bold text-center bg-gray-300 text-black" colSpan={5}>
                                 ВЕЛИЧИНА ОПАСНОСТИ
                             </th>
                         </tr>
                         <tr className="bg-gray-100">
                             <th className="border border-gray-800 p-2"></th>
                             <th className="border border-gray-800 p-2"></th>
-                            <th className="border border-gray-800 p-2 text-sm font-bold text-center w-40">
+                            <th className="border border-gray-800 p-2 text-sm font-bold text-center w-40 text-black">
                                 Максимална<br />5
                             </th>
-                            <th className="border border-gray-800 p-2 text-sm font-bold text-center w-40">
+                            <th className="border border-gray-800 p-2 text-sm font-bold text-center w-40 text-black">
                                 Велика<br />4
                             </th>
-                            <th className="border border-gray-800 p-2 text-sm font-bold text-center w-40">
+                            <th className="border border-gray-800 p-2 text-sm font-bold text-center w-40 text-black">
                                 Средња<br />3
                             </th>
-                            <th className="border border-gray-800 p-2 text-sm font-bold text-center w-40">
+                            <th className="border border-gray-800 p-2 text-sm font-bold text-center w-40 text-black">
                                 Мала<br />2
                             </th>
-                            <th className="border border-gray-800 p-2 text-sm font-bold text-center w-40">
+                            <th className="border border-gray-800 p-2 text-sm font-bold text-center w-40 text-black">
                                 Минимална<br />1
                             </th>
                         </tr>
@@ -254,19 +190,19 @@ export default function RiskAssessmentTable({ procenaId, onSelectionChange }: Ri
 
                     {/* Body */}
                     <tbody>
-                        {RISK_DATA.map((risk) => (
+                        {riskGroupData.risks.map((risk) => (
                             risk.items.map((item, itemIndex) => (
                                 <tr key={item.id} className="hover:bg-gray-50">
                                     {itemIndex === 0 && (
                                         <>
                                             <td
-                                                className="border border-gray-800 p-3 text-sm font-semibold text-center align-top"
+                                                className="border border-gray-800 p-3 text-sm font-semibold text-center align-top text-black"
                                                 rowSpan={risk.items.length}
                                             >
                                                 {risk.id}
                                             </td>
                                             <td
-                                                className="border border-gray-800 p-3 text-sm align-top font-bold"
+                                                className="border border-gray-800 p-3 text-sm align-top font-bold text-black"
                                                 rowSpan={risk.items.length}
                                             >
                                                 <div className="font-medium">

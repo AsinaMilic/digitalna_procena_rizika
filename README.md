@@ -1,36 +1,105 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Digital Risk Assessment Application
+
+A Next.js application for digital risk assessment and management, built for legal entities to evaluate and manage various types of risks.
+
+## Features
+
+- **User Authentication** - Registration, login, and admin approval system
+- **Legal Entity Management** - Create and manage legal entities (pravna lica)
+- **Risk Assessment** - Comprehensive risk evaluation across 11 categories
+- **Risk Matrix Generation** - Automated risk analysis and categorization
+- **Admin Panel** - User management and system administration
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+ 
+- SQL Server (Azure SQL Database supported)
+- npm or yarn
+
+### Installation
+
+1. Clone the repository
+2. Install dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Set up environment variables in `.env`:
+```env
+# Database Configuration
+DB_NAME=your_database_name
+DB_USER=your_username
+DB_PASSWORD=your_password
+DB_HOST=your_server_host
+DB_PORT=1433
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+# Database URL (for reference)
+DATABASE_URL="sqlserver://your_server:1433;database=your_db;user=your_user;password=your_pass;encrypt=true;trustServerCertificate=false"
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Run the development server:
+```bash
+npm run dev
+```
 
-## Learn More
+5. Seed the database with default risk groups:
+```bash
+npm run db:seed
+```
+(Note: The development server must be running for seeding to work)
 
-To learn more about Next.js, take a look at the following resources:
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Database
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This application uses **direct SQL Server connections** via the `mssql` package for optimal performance and Azure SQL compatibility.
 
-## Deploy on Vercel
+- Database schema documentation: `DATABASE_SCHEMA.md`
+- Connection configuration: `lib/db.ts`
+- Seed endpoint: `app/api/seed/route.ts`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Risk Categories
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The system evaluates risks across 11 predefined categories:
+
+1. Organizacija i rukovodstvo
+2. Radno okruženje  
+3. Radni procesi
+4. Tehnička sredstva
+5. Fizička sigurnost
+6. Zdravlje na radu
+7. Ekologija
+8. Informaciona sigurnost
+9. Pravna usklađenost
+10. Finansijski rizici
+11. Reputacioni rizici
+
+## Project Structure
+
+```
+├── app/                    # Next.js App Router
+│   ├── api/               # API routes
+│   ├── components/        # React components
+│   ├── admin/            # Admin panel
+│   ├── procena/          # Risk assessment pages
+│   └── ...
+├── lib/                   # Utilities and database connection
+├── scripts/              # Database scripts
+└── public/               # Static assets
+```
+
+## Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run db:seed` - Seed database with default data
+
+## Technology Stack
+
+- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS
+- **Backend**: Next.js API Routes, SQL Server
+- **Database**: Microsoft SQL Server / Azure SQL Database
+- **Authentication**: JWT with bcrypt password hashing

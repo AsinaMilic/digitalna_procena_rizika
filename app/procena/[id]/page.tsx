@@ -1,7 +1,9 @@
 "use client";
-import {useState, useEffect} from "react";
+import {useState, useCallback} from "react";
 import {useParams} from "next/navigation";
 import RiskAssessmentTable from "../../components/RiskAssessmentTable";
+import RiskGroupSelector from "../../components/RiskGroupSelector";
+import { getRiskGroupData } from "../../data/riskDataLoader";
 
 interface RiskSelection {
     risk_id: string;
@@ -14,34 +16,21 @@ export default function ProcenaPage() {
     const [selections, setSelections] = useState<RiskSelection[]>([]);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
+    const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
     const procenaId = params.id as string;
 
-    // Učitaj postojeće selekcije
-    useEffect(() => {
-        async function loadSelections() {
-            try {
-                const response = await fetch(`/api/procena/${procenaId}/risk-selection`);
-                if (response.ok) {
-                    const data = await response.json();
-                    setSelections(data.map((item: any) => ({
-                        risk_id: item.riskId,
-                        danger_level: item.dangerLevel,
-                        description: item.description
-                    })));
-                }
-            } catch (error) {
-                console.error('Greška pri učitavanju selekcija:', error);
-            }
-        }
-
-        if (procenaId) {
-            loadSelections();
-        }
-    }, [procenaId]);
-
-    const handleSelectionChange = (newSelections: RiskSelection[]) => {
+    // Use useCallback to prevent the callback from being recreated on every render
+    const handleSelectionChange = useCallback((newSelections: RiskSelection[]) => {
         setSelections(newSelections);
+    }, []);
+
+    const handleGroupSelect = (groupId: string) => {
+        setSelectedGroup(groupId);
+        setSelections([]); // Reset selections when changing groups
+        setMessage(null);
     };
+
+    const selectedGroupData = selectedGroup ? getRiskGroupData(selectedGroup) : null;
 
     const handleGenerateRiskMatrix = async () => {
         if (selections.length === 0) {
@@ -93,11 +82,20 @@ export default function ProcenaPage() {
                     </p>
                 </div>
 
-                {/* Risk Assessment Table */}
-                <RiskAssessmentTable 
-                    procenaId={procenaId}
-                    onSelectionChange={handleSelectionChange}
+                {/* Risk Group Selector */}
+                <RiskGroupSelector 
+                    onGroupSelect={handleGroupSelect}
+                    selectedGroup={selectedGroup}
                 />
+
+                {/* Risk Assessment Table - prikazuje se samo kada je grupa izabrana */}
+                {selectedGroupData && (
+                    <RiskAssessmentTable 
+                        procenaId={procenaId}
+                        riskGroupData={selectedGroupData}
+                        onSelectionChange={handleSelectionChange}
+                    />
+                )}
 
                 {/* Action Buttons */}
                 <div className="mt-8 text-center space-y-4">
