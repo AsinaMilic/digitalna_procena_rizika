@@ -24,16 +24,17 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
     const [loading, setLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
 
-    // Učitaj postojeće selekcije pri učitavanju komponente
+    // Učitaj postojeće selekcije i Prilog M podatke pri učitavanju komponente
     useEffect(() => {
-        async function loadExistingSelections() {
+        async function loadExistingData() {
             try {
-                const response = await fetch(`/api/procena/${procenaId}/risk-selection`);
-                if (response.ok) {
-                    const data = await response.json();
+                // Učitaj selekcije
+                const selectionsResponse = await fetch(`/api/procena/${procenaId}/risk-selection`);
+                if (selectionsResponse.ok) {
+                    const selectionsData = await selectionsResponse.json();
                     const selectionsMap = new Map<string, RiskSelection>();
 
-                    data.forEach((item: any) => {
+                    selectionsData.forEach((item: any) => {
                         selectionsMap.set(item.riskId, {
                             risk_id: item.riskId,
                             danger_level: item.dangerLevel,
@@ -48,17 +49,39 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
                         onSelectionChange(Array.from(selectionsMap.values()));
                     }
                 }
+
+                // Učitaj Prilog M podatke za ovu grupu
+                const prilogMResponse = await fetch(`/api/procena/${procenaId}/prilog-m`);
+                if (prilogMResponse.ok) {
+                    const prilogMData = await prilogMResponse.json();
+                    const prilogMMap = new Map<string, PrilogMData>();
+
+                    // Filtriraj podatke samo za trenutnu grupu
+                    prilogMData
+                        .filter((item: PrilogMData) => item.groupId === riskGroupData.id)
+                        .forEach((item: PrilogMData) => {
+                            prilogMMap.set(item.id, item);
+                        });
+
+                    setPrilogMData(prilogMMap);
+
+                    // Pozovi callback sa učitanim Prilog M podacima
+                    if (onPrilogMUpdate) {
+                        onPrilogMUpdate(Array.from(prilogMMap.values()));
+                    }
+                }
+
             } catch (error) {
-                console.error('Greška pri učitavanju postojećih selekcija:', error);
+                console.error('Greška pri učitavanju postojećih podataka:', error);
             } finally {
                 setInitialLoading(false);
             }
         }
 
-        if (procenaId) {
-            loadExistingSelections();
+        if (procenaId && riskGroupData) {
+            loadExistingData();
         }
-    }, [procenaId]); // Remove onSelectionChange from dependencies to prevent infinite loops
+    }, [procenaId, riskGroupData.id]); // Dodaj riskGroupData.id kao dependency
 
     const handleCellClick = async (riskId: string, dangerLevel: number, description: string) => {
         // Prevent multiple clicks on the same cell while loading

@@ -327,7 +327,14 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {RISK_GROUPS.map((group) => {
                             const isActive = group.id === activeGroupId;
-                            const isCompleted = (allPrilogMData.get(group.id)?.length || 0) > 0;
+                            const completedItems = allPrilogMData.get(group.id)?.length || 0;
+                            
+                            // Izračunaj ukupan broj stavki u grupi
+                            const groupData = getRiskGroupData(group.id);
+                            const totalItems = groupData ? groupData.risks.reduce((sum, risk) => sum + risk.items.length, 0) : 0;
+                            
+                            const isCompleted = completedItems > 0;
+                            const completionPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
                             return (
                                 <button
@@ -342,14 +349,42 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                                 >
                                     <div className="flex items-center justify-between mb-2">
                                         <h3 className="font-medium text-gray-800">{group.name}</h3>
-                                        {isCompleted && <span className="text-green-600">✅</span>}
+                                        <div className="flex items-center gap-2">
+                                            {completionPercentage === 100 && <span className="text-green-600">✅</span>}
+                                            {completionPercentage > 0 && completionPercentage < 100 && (
+                                                <span className="text-yellow-600">⏳</span>
+                                            )}
+                                        </div>
                                     </div>
                                     <p className="text-sm text-gray-600 line-clamp-2">{group.description}</p>
-                                    {allPrilogMData.get(group.id) && (
-                                        <div className="mt-2 text-xs text-blue-600">
-                                            {allPrilogMData.get(group.id)?.length || 0} stavki završeno
+                                    
+                                    {/* Progress info */}
+                                    <div className="mt-3 space-y-2">
+                                        <div className="flex items-center justify-between text-xs">
+                                            <span className="text-gray-600">
+                                                {completedItems} од {totalItems} завршено
+                                            </span>
+                                            <span className={`font-medium ${
+                                                completionPercentage === 100 ? 'text-green-600' :
+                                                completionPercentage > 0 ? 'text-yellow-600' :
+                                                'text-gray-400'
+                                            }`}>
+                                                {completionPercentage}%
+                                            </span>
                                         </div>
-                                    )}
+                                        
+                                        {/* Progress bar */}
+                                        <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                            <div
+                                                className={`h-1.5 rounded-full transition-all duration-300 ${
+                                                    completionPercentage === 100 ? 'bg-green-500' :
+                                                    completionPercentage > 0 ? 'bg-yellow-500' :
+                                                    'bg-gray-300'
+                                                }`}
+                                                style={{ width: `${completionPercentage}%` }}
+                                            ></div>
+                                        </div>
+                                    </div>
                                 </button>
                             );
                         })}
