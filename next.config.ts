@@ -4,18 +4,16 @@ const nextConfig: NextConfig = {
   // Optimize for Azure deployment
   compress: true,
   poweredByHeader: false,
-  
-  // Optimize bundle size
-  experimental: {
-    optimizePackageImports: ['react', 'react-dom'],
-  },
-  
+
   // Reduce build output
   generateBuildId: async () => {
     return 'build-' + Date.now();
   },
-  
-  // Handle Azure's reverse proxy
+
+  // Output configuration for better Azure compatibility
+  output: 'standalone',
+
+  // Handle Azure's reverse proxy and port configuration
   async headers() {
     return [
       {
@@ -37,6 +35,17 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+
+  // Ensure proper asset handling
+  assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
+
+  // Optimize for serverless/container environments
+  experimental: {
+    optimizePackageImports: ['react', 'react-dom'],
+  },
+  
+  // External packages for server components
+  serverExternalPackages: ['mssql'],
 };
 
 export default nextConfig;

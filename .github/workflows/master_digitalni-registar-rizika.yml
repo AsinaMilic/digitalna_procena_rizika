@@ -32,35 +32,85 @@ jobs:
       - name: Build Next.js app
         run: npm run build
 
-      - name: Create deployment package (optimized)
+      - name: Verify build output
+        run: |
+          echo "Checking build output..."
+          ls -la .next/
+          echo "Checking if standalone build exists..."
+          if [ -d ".next/standalone" ]; then
+            echo "✅ Standalone build found"
+          else
+            echo "ℹ️ No standalone build (normal for default setup)"
+          fi
+
+      - name: Create deployment package (standalone)
         run: |
           # Create a clean deployment directory
           mkdir deployment
           
-          # Copy only necessary files for production
-          cp package*.json deployment/
-          cp -r .next deployment/
-          cp -r public deployment/
-          cp next.config.ts deployment/
+          # Check if standalone build exists
+          if [ -d ".next/standalone" ]; then
+            echo "Using standalone build..."
+            # Copy standalone build
+            cp -r .next/standalone/* deployment/
+            cp -r .next/static deployment/.next/
+            cp -r public deployment/
+            
+            # Create a simple server.js for standalone
+            cat > deployment/server.js << 'EOF'
+          const { createServer } = require('http')
+          const { parse } = require('url')
+          const next = require('next')
           
-          # Copy API routes and app directory (excluding dev files)
-          cp -r app deployment/
+          const port = process.env.PORT || 3000
+          const app = next({ dev: false })
+          const handle = app.getRequestHandler()
           
-          # Copy lib directory for database
-          cp -r lib deployment/
-          
-          # Install only production dependencies
-          cd deployment
-          npm ci --only=production --ignore-scripts
-          
-          # Remove unnecessary files to reduce size
-          find node_modules -name "*.md" -delete
-          find node_modules -name "*.txt" -delete
-          find node_modules -name "test*" -type d -exec rm -rf {} + 2>/dev/null || true
-          find node_modules -name "*.test.js" -delete
-          find node_modules -name "*.spec.js" -delete
+          app.prepare().then(() => {
+            createServer(async (req, res) => {
+              try {
+                const parsedUrl = parse(req.url, true)
+                await handle(req, res, parsedUrl)
+              } catch (err) {
+                console.error('Error occurred handling', req.url, err)
+                res.statusCode = 500
+                res.end('internal server error')
+              }
+            }).listen(port, () => {
+              console.log(`> Ready on http://localhost:${port}`)
+            })
+          })
+          EOF
+          else
+            echo "Using regular build..."
+            # Copy regular build files
+            cp package*.json deployment/
+            cp -r .next deployment/
+            cp -r public deployment/
+            cp next.config.ts deployment/
+            cp server.js deployment/
+            cp startup.sh deployment/
+            cp web.config deployment/
+            
+            # Copy API routes and app directory
+            cp -r app deployment/
+            cp -r lib deployment/
+            
+            # Install production dependencies
+            cd deployment
+            npm ci --only=production
+            
+            # Remove unnecessary files to reduce size
+            find node_modules -name "*.md" -delete 2>/dev/null || true
+            find node_modules -name "*.txt" -delete 2>/dev/null || true
+            find node_modules -name "test*" -type d -not -path "*/next/*" -exec rm -rf {} + 2>/dev/null || true
+            find node_modules -name "*.test.js" -not -path "*/next/*" -delete 2>/dev/null || true
+            find node_modules -name "*.spec.js" -not -path "*/next/*" -delete 2>/dev/null || true
+            cd ..
+          fi
           
           # Create optimized zip
+          cd deployment
           zip -r ../release.zip . -x "*.git*" "*.env*" "node_modules/.cache/*"
 
       - name: Upload artifact for deployment job
