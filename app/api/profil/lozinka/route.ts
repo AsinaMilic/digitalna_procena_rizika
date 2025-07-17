@@ -15,8 +15,8 @@ export async function PUT(request: NextRequest) {
         const token = authHeader.substring(7);
         let decoded;
         try {
-            decoded = jwt.verify(token, JWT_SECRET) as any;
-        } catch (error) {
+            decoded = jwt.verify(token, JWT_SECRET) as { id: number };
+        } catch {
             return NextResponse.json({ greška: 'Nevažeći token' }, { status: 401 });
         }
 
@@ -34,7 +34,7 @@ export async function PUT(request: NextRequest) {
 
         // Pronađi korisnika
         const korisnikResult = await pool.request()
-            .input('korisnikId', decoded.korisnikId)
+            .input('korisnikId', decoded.id)
             .query('SELECT id, lozinka FROM korisnici WHERE id = @korisnikId');
 
         if (korisnikResult.recordset.length === 0) {
@@ -55,7 +55,7 @@ export async function PUT(request: NextRequest) {
         // Ažuriraj lozinku
         await pool.request()
             .input('novaLozinka', hashedNewPassword)
-            .input('korisnikId', decoded.korisnikId)
+            .input('korisnikId', decoded.id)
             .query('UPDATE korisnici SET lozinka = @novaLozinka WHERE id = @korisnikId');
 
         return NextResponse.json({

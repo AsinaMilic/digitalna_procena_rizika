@@ -1,7 +1,7 @@
-import {NextRequest, NextResponse} from 'next/server';
+import {NextResponse} from 'next/server';
 import {getDbConnection} from '../../../lib/db';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
     try {
         const pool = await getDbConnection();
         const result = await pool.request().query('SELECT 1 AS ok');

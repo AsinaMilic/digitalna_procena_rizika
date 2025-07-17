@@ -33,8 +33,6 @@ export async function POST() {
             throw new Error('No admin user found. Please ensure the database is properly initialized.');
         }
         
-        const adminUserId = adminUser.recordset[0].id;
-
         // Create a test risk assessment (without foreign key constraints for now)
         const procenaResult = await pool.request()
             .input('naziv', 'Test Procena Rizika')

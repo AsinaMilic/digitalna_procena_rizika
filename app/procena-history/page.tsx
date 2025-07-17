@@ -1,13 +1,9 @@
 "use client";
-import { useState } from "react";
 import ProcenaHistoryTable from "../components/ProcenaHistoryTable";
 import Link from "next/link";
 
 export default function ProcenaHistoryPage() {
-    const [selectedProcenaId, setSelectedProcenaId] = useState<number | null>(null);
-
     const handleEditProcena = (procenaId: number) => {
-        setSelectedProcenaId(procenaId);
         // Redirect to edit page
         window.location.href = `/optimized-risk/${procenaId}`;
     };

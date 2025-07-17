@@ -39,7 +39,7 @@ export default function Registracija() {
             } else {
                 setError(data.greška || 'Došlo je do greške');
             }
-        } catch (err) {
+        } catch {
             setError('Došlo je do greške pri slanju zahteva');
         } finally {
             setLoading(false);

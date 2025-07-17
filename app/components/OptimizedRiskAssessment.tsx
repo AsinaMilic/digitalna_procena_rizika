@@ -5,7 +5,6 @@ import { RISK_GROUPS } from '../data/riskGroups';
 import { getRiskGroupData } from '../data/riskDataLoader';
 import { PrilogMData } from '../data/riskDataLoader';
 import RiskAssessmentTable from './RiskAssessmentTable';
-import PrilogMViewer from './PrilogMViewer';
 
 interface RiskSelection {
     risk_id: string;
@@ -36,12 +35,7 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
     });
     const [loading, setLoading] = useState(false);
 
-    // Učitaj postojeće podatke pri inicijalizaciji
-    useEffect(() => {
-        loadAllData();
-    }, [procenaId]);
-
-    const loadAllData = async () => {
+    const loadAllData = useCallback(async () => {
         setLoading(true);
         try {
             // Učitaj Prilog M podatke - jedan poziv za sve podatke
@@ -90,7 +84,12 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
         } finally {
             setLoading(false);
         }
-    };
+    }, [procenaId]);
+
+    // Učitaj postojeće podatke pri inicijalizaciji
+    useEffect(() => {
+        loadAllData();
+    }, [loadAllData]);
 
     const calculateStatistics = (prilogMData: Map<string, PrilogMData[]>) => {
         let totalItems = 0;
@@ -328,11 +327,11 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                         {RISK_GROUPS.map((group) => {
                             const isActive = group.id === activeGroupId;
                             const completedItems = allPrilogMData.get(group.id)?.length || 0;
-                            
+
                             // Izračunaj ukupan broj stavki u grupi
                             const groupData = getRiskGroupData(group.id);
                             const totalItems = groupData ? groupData.risks.reduce((sum, risk) => sum + risk.items.length, 0) : 0;
-                            
+
                             const isCompleted = completedItems > 0;
                             const completionPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
@@ -357,30 +356,28 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                                         </div>
                                     </div>
                                     <p className="text-sm text-gray-600 line-clamp-2">{group.description}</p>
-                                    
+
                                     {/* Progress info */}
                                     <div className="mt-3 space-y-2">
                                         <div className="flex items-center justify-between text-xs">
                                             <span className="text-gray-600">
                                                 {completedItems} од {totalItems} завршено
                                             </span>
-                                            <span className={`font-medium ${
-                                                completionPercentage === 100 ? 'text-green-600' :
+                                            <span className={`font-medium ${completionPercentage === 100 ? 'text-green-600' :
                                                 completionPercentage > 0 ? 'text-yellow-600' :
-                                                'text-gray-400'
-                                            }`}>
+                                                    'text-gray-400'
+                                                }`}>
                                                 {completionPercentage}%
                                             </span>
                                         </div>
-                                        
+
                                         {/* Progress bar */}
                                         <div className="w-full bg-gray-200 rounded-full h-1.5">
                                             <div
-                                                className={`h-1.5 rounded-full transition-all duration-300 ${
-                                                    completionPercentage === 100 ? 'bg-green-500' :
+                                                className={`h-1.5 rounded-full transition-all duration-300 ${completionPercentage === 100 ? 'bg-green-500' :
                                                     completionPercentage > 0 ? 'bg-yellow-500' :
-                                                    'bg-gray-300'
-                                                }`}
+                                                        'bg-gray-300'
+                                                    }`}
                                                 style={{ width: `${completionPercentage}%` }}
                                             ></div>
                                         </div>

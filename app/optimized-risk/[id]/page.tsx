@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import OptimizedRiskAssessment from '../../components/OptimizedRiskAssessment';
 
 interface PravnoLice {
@@ -67,12 +68,12 @@ export default function OptimizedRiskByIdPage() {
                     <div className="text-red-500 text-6xl mb-4">⚠️</div>
                     <h1 className="text-2xl font-bold text-red-800 mb-2">Greška</h1>
                     <p className="text-red-600 mb-4">{error}</p>
-                    <a 
+                    <Link 
                         href="/optimized-risk" 
                         className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
                     >
                         Nazad na početak
-                    </a>
+                    </Link>
                 </div>
             </div>
         );
@@ -102,7 +103,7 @@ export default function OptimizedRiskByIdPage() {
                         </div>
                         
                         <div className="flex gap-3">
-                            <a
+                            <Link
                                 href="/procena-history"
                                 className="text-green-600 hover:text-green-800 font-medium flex items-center gap-2"
                             >
@@ -110,8 +111,8 @@ export default function OptimizedRiskByIdPage() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                                 </svg>
                                 Историја процена
-                            </a>
-                            <a
+                            </Link>
+                            <Link
                                 href="/optimized-risk"
                                 className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2"
                             >
@@ -119,7 +120,7 @@ export default function OptimizedRiskByIdPage() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
                                 </svg>
                                 Нова процена
-                            </a>
+                            </Link>
                         </div>
                     </div>
                 </div>

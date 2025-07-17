@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { PrilogMData } from "../data/riskDataLoader";
 
 interface PrilogMViewerProps {
@@ -20,11 +20,7 @@ export default function PrilogMViewer({ procenaId, title = "ПРИLOG М - Ни�
         averageRiskLevel: 0
     });
 
-    useEffect(() => {
-        loadPrilogMData();
-    }, [procenaId]);
-
-    const loadPrilogMData = async () => {
+    const loadPrilogMData = useCallback(async () => {
         try {
             setLoading(true);
             const response = await fetch(`/api/procena/${procenaId}/prilog-m`);
@@ -41,7 +37,11 @@ export default function PrilogMViewer({ procenaId, title = "ПРИLOG М - Ни�
         } finally {
             setLoading(false);
         }
-    };
+    }, [procenaId]);
+
+    useEffect(() => {
+        loadPrilogMData();
+    }, [loadPrilogMData]);
 
     const calculateStatistics = (data: PrilogMData[]) => {
         const totalItems = data.length;

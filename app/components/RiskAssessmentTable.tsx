@@ -21,7 +21,7 @@ interface RiskAssessmentTableProps {
 export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate }: RiskAssessmentTableProps) {
     const [selections, setSelections] = useState<Map<string, RiskSelection>>(new Map());
     const [prilogMData, setPrilogMData] = useState<Map<string, PrilogMData>>(new Map());
-    const [loading, setLoading] = useState(false);
+    const [loading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -36,7 +36,7 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
                     const selectionsData = await selectionsResponse.json();
                     const selectionsMap = new Map<string, RiskSelection>();
 
-                    selectionsData.forEach((item: any) => {
+                    selectionsData.forEach((item: { riskId: string; dangerLevel: number; description: string }) => {
                         selectionsMap.set(item.riskId, {
                             risk_id: item.riskId,
                             danger_level: item.dangerLevel,
@@ -83,7 +83,7 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
         if (procenaId && riskGroupData) {
             loadExistingData();
         }
-    }, [procenaId, riskGroupData.id]); // Dodaj riskGroupData.id kao dependency
+    }, [procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate]); // Dodaj sve dependencies
 
     const handleCellClick = async (riskId: string, dangerLevel: number, description: string) => {
         // Prevent multiple clicks on the same cell while loading
@@ -310,7 +310,7 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
             {/* Status poruke */}
             {hasUnsavedChanges && !saving && (
                 <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg text-center border border-yellow-300">
-                    ⚠️ Имате несачуване промене. Кликните "Сачувај промене" да их сачувате.
+                    ⚠️ Имате несачуване промене. Кликните &quot;Сачувај промене&quot; да их сачувате.
                 </div>
             )}
 

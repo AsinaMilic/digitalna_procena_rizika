@@ -3,16 +3,17 @@ import { PrilogMData } from '../../../../data/riskDataLoader';
 import { getDbConnection } from '../../../../../lib/db';
 
 async function executeWithRetry<T>(operation: () => Promise<T>, maxRetries = 3): Promise<T> {
-    let lastError: any;
+    let lastError: Error = new Error('Unknown error');
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             return await operation();
-        } catch (error: any) {
-            lastError = error;
-            console.log(`Attempt ${attempt} failed:`, error.message);
+        } catch (error: unknown) {
+            lastError = error as Error;
+            const err = error as { code?: string; message: string };
+            console.log(`Attempt ${attempt} failed:`, err.message);
             
-            if (attempt < maxRetries && (error.code === 'ECONNCLOSED' || error.code === 'ENOTOPEN')) {
+            if (attempt < maxRetries && (err.code === 'ECONNCLOSED' || err.code === 'ENOTOPEN')) {
                 console.log(`Retrying in ${attempt * 1000}ms...`);
                 await new Promise(resolve => setTimeout(resolve, attempt * 1000));
                 continue;
@@ -137,10 +138,11 @@ export async function POST(
       data: prilogMItem
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Greška pri čuvanju Prilog M podatka:', error);
+    const err = error as Error;
     
-    if (error.message === "Procena ne postoji") {
+    if (err.message === "Procena ne postoji") {
       return NextResponse.json({ error: "Procena ne postoji" }, { status: 404 });
     }
     

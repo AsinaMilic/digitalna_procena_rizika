@@ -14,8 +14,8 @@ export async function PUT(request: NextRequest) {
         const token = authHeader.substring(7);
         let decoded;
         try {
-            decoded = jwt.verify(token, JWT_SECRET) as any;
-        } catch (error) {
+            decoded = jwt.verify(token, JWT_SECRET) as { id: number };
+        } catch {
             return NextResponse.json({ greška: 'Nevažeći token' }, { status: 401 });
         }
 
@@ -30,7 +30,7 @@ export async function PUT(request: NextRequest) {
         // Proveri da li email već postoji (osim za trenutnog korisnika)
         const existingUserResult = await pool.request()
             .input('email', email)
-            .input('korisnikId', decoded.korisnikId)
+            .input('korisnikId', decoded.id)
             .query('SELECT id FROM korisnici WHERE email = @email AND id != @korisnikId');
 
         if (existingUserResult.recordset.length > 0) {
@@ -42,12 +42,12 @@ export async function PUT(request: NextRequest) {
             .input('ime', ime)
             .input('prezime', prezime)
             .input('email', email)
-            .input('korisnikId', decoded.korisnikId)
+            .input('korisnikId', decoded.id)
             .query('UPDATE korisnici SET ime = @ime, prezime = @prezime, email = @email WHERE id = @korisnikId');
 
         // Vrati ažurirane podatke
         const updatedUserResult = await pool.request()
-            .input('korisnikId', decoded.korisnikId)
+            .input('korisnikId', decoded.id)
             .query('SELECT id, email, ime, prezime, je_admin FROM korisnici WHERE id = @korisnikId');
 
         const updatedUser = updatedUserResult.recordset[0];

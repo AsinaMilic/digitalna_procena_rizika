@@ -2,6 +2,11 @@ import {NextRequest, NextResponse} from 'next/server';
 import jwt from 'jsonwebtoken';
 import {getDbConnection} from '../../../../lib/db';
 
+interface JWTPayload {
+    id: number;
+    je_admin: boolean;
+}
+
 // Dobijanje svih korisnika na čekanju (i ostalih, exkluduj admina)
 export async function GET(request: NextRequest) {
     try {
@@ -9,7 +14,7 @@ export async function GET(request: NextRequest) {
         if (!token) {
             return NextResponse.json({greška: 'Nemate dozvolu'}, {status: 401});
         }
-        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
         if (!decoded.je_admin) {
             return NextResponse.json({greška: 'Nemate admin dozvolu'}, {status: 403});
         }
@@ -34,7 +39,7 @@ export async function PUT(request: NextRequest) {
         if (!token) {
             return NextResponse.json({greška: 'Nemate dozvolu'}, {status: 401});
         }
-        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
         if (!decoded.je_admin) {
             return NextResponse.json({greška: 'Nemate admin dozvolu'}, {status: 403});
         }
