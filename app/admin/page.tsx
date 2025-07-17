@@ -112,28 +112,32 @@ export default function AdminPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-100">
-            <nav className="bg-white/80 backdrop-blur-md shadow-lg border-b border-blue-100">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-purple-50">
+            {/* Modern Navigation */}
+            <nav className="bg-white/95 backdrop-blur-lg shadow-sm border-b border-gray-200/50 sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-20">
-                        <div className="flex items-center">
-                            <div className="flex items-center space-x-3">
-                                <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
-                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                    </svg>
-                                </div>
-                                <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                                    Admin Panel
-                                </h1>
+                    <div className="flex justify-between items-center h-16">
+                        <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg flex items-center justify-center shadow-md">
+                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h1 className="text-lg font-bold text-gray-900">Admin Panel</h1>
+                                <p className="text-xs text-gray-500 -mt-1">Upravljanje sistemom</p>
                             </div>
                         </div>
+                        
                         <div className="flex items-center space-x-4">
                             <button
                                 onClick={() => router.push('/')}
-                                className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-semibold py-2.5 px-5 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105"
+                                className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors duration-200"
                             >
+                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                                </svg>
                                 Početna
                             </button>
                             <button
@@ -141,8 +145,11 @@ export default function AdminPage() {
                                     localStorage.clear();
                                     router.push('/prijava');
                                 }}
-                                className="bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white font-semibold py-2.5 px-5 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105"
+                                className="inline-flex items-center px-3 py-2 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors duration-200"
                             >
+                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                                </svg>
                                 Odjava
                             </button>
                         </div>
@@ -150,82 +157,162 @@ export default function AdminPage() {
                 </div>
             </nav>
 
-            <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-                <div className="mb-8">
-                    <div className="text-center mb-8">
-                        <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
-                            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
-                            </svg>
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                {/* Header Section */}
+                <div className="text-center mb-12">
+                    <div className="inline-flex items-center px-4 py-2 bg-purple-50 text-purple-700 rounded-full text-sm font-medium mb-6">
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        </svg>
+                        Administratorski panel
+                    </div>
+                    <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-tight">
+                        Управљање <span className="text-purple-600">корисницима</span>
+                    </h1>
+                    <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8 leading-relaxed">
+                        Преглед, одобравање и управљање свим регистрованим корисницима система за процену ризика.
+                    </p>
+                </div>
+
+                {/* Stats Cards */}
+                <div className="grid md:grid-cols-3 gap-6 mb-12">
+                    <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                        <div className="flex items-center">
+                            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
+                                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                </svg>
+                            </div>
+                            <div className="ml-4">
+                                <p className="text-sm font-medium text-gray-600">Укупно корисника</p>
+                                <p className="text-2xl font-bold text-gray-900">{korisnici.length}</p>
+                            </div>
                         </div>
-                        <h2 className="text-4xl font-bold text-gray-800 mb-2">Upravljanje korisnicima</h2>
-                        <p className="text-gray-600">Pregled i upravljanje registrovanim korisnicima</p>
                     </div>
                     
-                    <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-purple-100 overflow-hidden">
-                        <div className="divide-y divide-purple-100">
-                            {korisnici.map((korisnik) => (
-                                <div key={korisnik.id} className="p-6 hover:bg-purple-50/50 transition-all duration-200">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex-1">
-                                            <div className="flex items-center">
-                                                <div className="flex-shrink-0">
-                                                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
-                                                        <span className="text-lg font-bold text-white">
-                                                            {korisnik.ime[0]}{korisnik.prezime[0]}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div className="ml-6">
-                                                    <div className="text-lg font-semibold text-gray-900">
-                                                        {korisnik.ime} {korisnik.prezime}
-                                                    </div>
-                                                    <div className="text-sm text-gray-600 mt-1">{korisnik.email}</div>
-                                                    <div className="text-xs text-gray-500 mt-1 flex items-center">
-                                                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0V6a2 2 0 012-2h4a2 2 0 012 2v1m-6 0h8m-8 0H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V9a2 2 0 00-2-2h-2"/>
-                                                        </svg>
-                                                        Registrovan: {new Date(korisnik.datum_kreiranja).toLocaleDateString('sr-RS')}
-                                                    </div>
-                                                </div>
+                    <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                        <div className="flex items-center">
+                            <div className="w-12 h-12 bg-yellow-50 rounded-xl flex items-center justify-center">
+                                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div className="ml-4">
+                                <p className="text-sm font-medium text-gray-600">На чекању</p>
+                                <p className="text-2xl font-bold text-gray-900">
+                                    {korisnici.filter(k => k.status === 'na_cekanju').length}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+                        <div className="flex items-center">
+                            <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
+                                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div className="ml-4">
+                                <p className="text-sm font-medium text-gray-600">Одобрени</p>
+                                <p className="text-2xl font-bold text-gray-900">
+                                    {korisnici.filter(k => k.status === 'odobren').length}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Users List */}
+                <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                        <h3 className="text-lg font-semibold text-gray-900">Листа корисника</h3>
+                        <p className="text-sm text-gray-600 mt-1">Управљајте статусом корисничких налога</p>
+                    </div>
+                    
+                    <div className="divide-y divide-gray-200">
+                        {korisnici.map((korisnik) => (
+                            <div key={korisnik.id} className="p-6 hover:bg-gray-50 transition-all duration-200">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-4">
+                                        <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                                            <span className="text-white font-semibold">
+                                                {korisnik.ime.charAt(0)}{korisnik.prezime.charAt(0)}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <h4 className="text-lg font-semibold text-gray-900">
+                                                {korisnik.ime} {korisnik.prezime}
+                                            </h4>
+                                            <p className="text-sm text-gray-600">{korisnik.email}</p>
+                                            <div className="flex items-center text-xs text-gray-500 mt-1">
+                                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0V6a2 2 0 012-2h4a2 2 0 012 2v1m-6 0h8m-8 0H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V9a2 2 0 00-2-2h-2"/>
+                                                </svg>
+                                                Регистрован: {new Date(korisnik.datum_kreiranja).toLocaleDateString('sr-RS')}
                                             </div>
                                         </div>
-                                        <div className="flex items-center space-x-4">
-                                            <span className={`inline-flex px-4 py-2 text-sm font-semibold rounded-xl shadow-sm ${getStatusColor(korisnik.status)}`}>
-                                                {getStatusText(korisnik.status)}
-                                            </span>
+                                    </div>
+                                    
+                                    <div className="flex items-center space-x-4">
+                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(korisnik.status)}`}>
                                             {korisnik.status === 'na_cekanju' && (
-                                                <div className="flex space-x-3">
-                                                    <button
-                                                        onClick={() => handleStatusChange(korisnik.id, 'odobren')}
-                                                        className="bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white font-semibold py-2 px-4 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105"
-                                                    >
-                                                        Odobri
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleStatusChange(korisnik.id, 'odbačen')}
-                                                        className="bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white font-semibold py-2 px-4 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105"
-                                                    >
-                                                        Odbaci
-                                                    </button>
-                                                </div>
+                                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
                                             )}
-                                        </div>
+                                            {korisnik.status === 'odobren' && (
+                                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
+                                            )}
+                                            {korisnik.status === 'odbačen' && (
+                                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
+                                                </svg>
+                                            )}
+                                            {getStatusText(korisnik.status)}
+                                        </span>
+                                        
+                                        {korisnik.status === 'na_cekanju' && (
+                                            <div className="flex space-x-2">
+                                                <button
+                                                    onClick={() => handleStatusChange(korisnik.id, 'odobren')}
+                                                    className="inline-flex items-center px-3 py-2 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors duration-200"
+                                                >
+                                                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/>
+                                                    </svg>
+                                                    Одобри
+                                                </button>
+                                                <button
+                                                    onClick={() => handleStatusChange(korisnik.id, 'odbačen')}
+                                                    className="inline-flex items-center px-3 py-2 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors duration-200"
+                                                >
+                                                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
+                                                    </svg>
+                                                    Одбаци
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                        {korisnici.length === 0 && (
-                            <div className="text-center py-16">
-                                <div className="w-16 h-16 bg-gray-100 rounded-2xl mx-auto mb-4 flex items-center justify-center">
-                                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
-                                    </svg>
-                                </div>
-                                <p className="text-gray-500 text-lg">Nema korisnika za prikaz</p>
                             </div>
-                        )}
+                        ))}
                     </div>
+                    
+                    {korisnici.length === 0 && (
+                        <div className="text-center py-16">
+                            <div className="w-16 h-16 bg-gray-100 rounded-2xl mx-auto mb-4 flex items-center justify-center">
+                                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                </svg>
+                            </div>
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">Нема корисника</h3>
+                            <p className="text-gray-500">Тренутно нема регистрованих корисника за приказ.</p>
+                        </div>
+                    )}
                 </div>
             </main>
         </div>

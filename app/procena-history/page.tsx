@@ -55,9 +55,9 @@ export default function ProcenaHistoryPage() {
                             <h3 className="font-medium text-gray-800 mb-2">Преглед и претрага:</h3>
                             <ul className="space-y-1">
                                 <li>• Претражујте по називу правног лица или ПИБ-у</li>
-                                <li>• Филтрирајте по статусу процене</li>
-                                <li>• Сортирајте по датуму, називу или статусу</li>
+                                <li>• Сортирајте по датуму или називу</li>
                                 <li>• Видите статистике ризика за сваку процену</li>
+                                <li>• Експортујте извештај у PDF формат</li>
                             </ul>
                         </div>
                         <div>
@@ -66,7 +66,7 @@ export default function ProcenaHistoryPage() {
                                 <li>• <span className="text-blue-600 font-medium">Прегледај</span> - Отвори процену у режиму прегледа</li>
                                 <li>• <span className="text-green-600 font-medium">Уреди</span> - Отвори процену за уређивање</li>
                                 <li>• Видите ниво ризика на основу анализе</li>
-                                <li>• Пратите статус сваке процене</li>
+                                <li>• Обришите процену ако је потребно</li>
                             </ul>
                         </div>
                     </div>
