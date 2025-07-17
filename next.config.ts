@@ -4,6 +4,17 @@ const nextConfig: NextConfig = {
   // Optimize for Azure deployment
   compress: true,
   poweredByHeader: false,
+  
+  // Optimize bundle size
+  experimental: {
+    optimizePackageImports: ['react', 'react-dom'],
+  },
+  
+  // Reduce build output
+  generateBuildId: async () => {
+    return 'build-' + Date.now();
+  },
+  
   // Handle Azure's reverse proxy
   async headers() {
     return [
