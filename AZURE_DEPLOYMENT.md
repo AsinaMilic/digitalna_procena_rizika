@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-1. **Azure App Service** created
+1. **Azure App Service** created (Linux, Node.js 20 LTS)
 2. **Azure SQL Database** set up
 3. **GitHub repository** with your code
 
@@ -45,7 +45,7 @@ Go to Azure Portal → App Service → Configuration → Application settings:
 #### Application Configuration
 - `JWT_SECRET`: [Generate a secure random string - use: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"]
 - `NODE_ENV`: production
-- `WEBSITE_NODE_DEFAULT_VERSION`: 18.17.0
+- `WEBSITE_NODE_DEFAULT_VERSION`: 20-lts
 
 #### Optional
 - `DEBUG`: false

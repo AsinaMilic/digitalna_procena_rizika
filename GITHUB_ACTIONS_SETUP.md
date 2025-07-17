@@ -4,7 +4,10 @@
 
 ### Step 1: Create Azure App Service
 1. Go to Azure Portal
-2. Create new App Service (Node.js 18 LTS)
+2. Create new App Service:
+   - **Runtime Stack**: Node.js 20 LTS
+   - **Operating System**: Linux (recommended)
+   - **Region**: Choose closest to your users
 3. Note down your app name (e.g., `digitalni-registar-rizika`)
 
 ### Step 2: Get Publish Profile
@@ -38,7 +41,7 @@ DB_HOST=digitalni-registar-procene-rizika.database.windows.net
 DB_PORT=1433
 JWT_SECRET=your_jwt_secret_here
 NODE_ENV=production
-WEBSITE_NODE_DEFAULT_VERSION=18.17.0
+WEBSITE_NODE_DEFAULT_VERSION=20-lts
 ```
 
 ### Step 6: Deploy
