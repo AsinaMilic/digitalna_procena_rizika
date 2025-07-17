@@ -125,33 +125,19 @@ export default function Home() {
                         
                         <div className="space-y-4">
                             <button
-                                onClick={() => router.push('/pravno-lice/novo')}
+                                onClick={() => router.push('/optimized-risk')}
                                 className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105 text-lg"
                             >
-                                🏢 Започни нову процену ризика
+                                🚀 Започни процену ризика
                             </button>
                             
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-                                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 p-6 rounded-xl border border-emerald-200">
-                                    <div className="text-emerald-600 mb-2">
-                                        <svg className="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                    </div>
-                                    <h3 className="font-semibold text-emerald-800 mb-1">Стандардизовано</h3>
-                                    <p className="text-sm text-emerald-700">Према SRPS A.L2.003:2025</p>
-                                </div>
-                                
-                                <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-xl border border-purple-200">
-                                    <div className="text-purple-600 mb-2">
-                                        <svg className="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                                        </svg>
-                                    </div>
-                                    <h3 className="font-semibold text-purple-800 mb-1">Аутоматизовано</h3>
-                                    <p className="text-sm text-purple-700">Генерисање матрица ризика</p>
-                                </div>
-                            </div>
+                            <button
+                                onClick={() => router.push('/procena-history')}
+                                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105 text-lg"
+                            >
+                                📊 Историја процена ризика
+                            </button>
+
                         </div>
                     </div>
                 </div>

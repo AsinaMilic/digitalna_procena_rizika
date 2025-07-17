@@ -1,91 +1,73 @@
-import {NextResponse} from "next/server";
-import {getDbConnection} from "../../../lib/db";
+import { NextRequest, NextResponse } from 'next/server';
+import { getDbConnection } from '../../../lib/db';
 
-export async function POST(req: Request) {
+export async function GET() {
     try {
-        const {pravnoLiceId} = await req.json();
-        
-        if (!pravnoLiceId) {
-            return NextResponse.json({error: "pravnoLiceId je obavezan"}, {status: 400});
-        }
-
         const pool = await getDbConnection();
+        
+        // Dobij sve procene sa podacima o pravnom licu
+        const result = await pool.request().query(`
+            SELECT 
+                pr.id,
+                pr.datum,
+                pr.status,
+                pl.id as pravnoLiceId,
+                pl.naziv,
+                pl.pib,
+                pl.adresa,
+                -- Statistike za svaku procenu
+                (SELECT COUNT(*) FROM RiskSelection rs WHERE rs.procenaId = pr.id) as ukupnoRizika,
+                (SELECT COUNT(*) FROM RiskSelection rs WHERE rs.procenaId = pr.id AND rs.dangerLevel >= 4) as visokoRizicniRizici
+            FROM ProcenaRizika pr
+            INNER JOIN PravnoLice pl ON pr.pravnoLiceId = pl.id
+            ORDER BY pr.datum DESC
+        `);
 
-        const result = await pool.request()
-            .input('pravnoLiceId', pravnoLiceId)
-            .input('status', 'u_toku')
-            .query(`
-                INSERT INTO ProcenaRizika (pravnoLiceId, datum, status) 
-                OUTPUT INSERTED.id
-                VALUES (@pravnoLiceId, GETDATE(), @status)
-            `);
-
-        const procenaId = result.recordset[0].id;
-
-        return NextResponse.json({success: true, id: procenaId});
+        return NextResponse.json(result.recordset);
     } catch (error) {
-        console.error("Greška pri kreiranju procene:", error);
-        return NextResponse.json({error: "Greška pri čuvanju podataka"}, {status: 500});
+        console.error('Greška pri dobijanju procena:', error);
+        return NextResponse.json(
+            { error: 'Greška pri dobijanju procena' },
+            { status: 500 }
+        );
     }
 }
 
-export async function GET(req: Request) {
+export async function POST(request: NextRequest) {
     try {
-        const pool = await getDbConnection();
-
-        const result = await pool.request().query(`
-            SELECT 
-                pr.id, pr.datum, pr.status, pr.pravnoLiceId,
-                pl.naziv, pl.pib, pl.adresa,
-                ur.id as unosId, ur.grupaId, ur.polje, ur.vrednost,
-                gr.naziv as grupaNaziv, gr.redosled
-            FROM ProcenaRizika pr
-            JOIN PravnoLice pl ON pr.pravnoLiceId = pl.id
-            LEFT JOIN UnosRizika ur ON pr.id = ur.procenaId
-            LEFT JOIN GrupaRizika gr ON ur.grupaId = gr.id
-            ORDER BY pr.id, gr.redosled
-        `);
-
-        // Group the results by procena
-        const proceneMap = new Map();
+        const { pravnoLiceId } = await request.json();
         
-        result.recordset.forEach(row => {
-            if (!proceneMap.has(row.id)) {
-                proceneMap.set(row.id, {
-                    id: row.id,
-                    datum: row.datum,
-                    status: row.status,
-                    pravnoLiceId: row.pravnoLiceId,
-                    pravnoLice: {
-                        id: row.pravnoLiceId,
-                        naziv: row.naziv,
-                        pib: row.pib,
-                        adresa: row.adresa
-                    },
-                    unosi: []
-                });
-            }
-            
-            if (row.unosId) {
-                proceneMap.get(row.id).unosi.push({
-                    id: row.unosId,
-                    procenaId: row.id,
-                    grupaId: row.grupaId,
-                    polje: row.polje,
-                    vrednost: row.vrednost,
-                    grupa: {
-                        id: row.grupaId,
-                        naziv: row.grupaNaziv,
-                        redosled: row.redosled
-                    }
-                });
-            }
-        });
+        if (!pravnoLiceId) {
+            return NextResponse.json(
+                { error: 'pravnoLiceId je obavezan' },
+                { status: 400 }
+            );
+        }
 
-        const procene = Array.from(proceneMap.values());
-        return NextResponse.json(procene);
+        const pool = await getDbConnection();
+        
+        // Kreiraj novu procenu
+        const result = await pool.request()
+            .input('pravnoLiceId', pravnoLiceId)
+            .query(`
+                INSERT INTO ProcenaRizika (pravnoLiceId, datum, status)
+                OUTPUT INSERTED.id, INSERTED.datum, INSERTED.status
+                VALUES (@pravnoLiceId, GETDATE(), 'u_toku')
+            `);
+
+        const novaProcena = result.recordset[0];
+
+        return NextResponse.json({
+            id: novaProcena.id,
+            pravnoLiceId: pravnoLiceId,
+            datum: novaProcena.datum,
+            status: novaProcena.status
+        });
     } catch (error) {
-        console.error("Greška pri dohvatanju procena:", error);
-        return NextResponse.json({error: "Greška pri dohvatanju podataka"}, {status: 500});
+        console.error('Greška pri kreiranju procene:', error);
+        return NextResponse.json(
+            { error: 'Greška pri kreiranju procene' },
+            { status: 500 }
+        );
     }
 }

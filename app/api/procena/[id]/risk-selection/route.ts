@@ -1,6 +1,28 @@
 import {NextResponse} from "next/server";
 import {getDbConnection} from "../../../../../lib/db";
 
+async function executeWithRetry<T>(operation: () => Promise<T>, maxRetries = 3): Promise<T> {
+    let lastError: any;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            return await operation();
+        } catch (error: any) {
+            lastError = error;
+            console.log(`Attempt ${attempt} failed:`, error.message);
+            
+            if (attempt < maxRetries && (error.code === 'ECONNCLOSED' || error.code === 'ENOTOPEN')) {
+                console.log(`Retrying in ${attempt * 1000}ms...`);
+                await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+                continue;
+            }
+            break;
+        }
+    }
+    
+    throw lastError;
+}
+
 export async function POST(req: Request, {params}: {params: Promise<{id: string}>}) {
     try {
         const {id} = await params;
@@ -11,51 +33,58 @@ export async function POST(req: Request, {params}: {params: Promise<{id: string}
             return NextResponse.json({error: "Nedostaju potrebni podaci"}, {status: 400});
         }
 
-        const pool = await getDbConnection();
+        await executeWithRetry(async () => {
+            const pool = await getDbConnection();
 
-        // Check if procena exists
-        const procenaCheck = await pool.request()
-            .input('procenaId', procenaId)
-            .query('SELECT id FROM ProcenaRizika WHERE id = @procenaId');
+            // Check if procena exists
+            const procenaCheck = await pool.request()
+                .input('procenaId', procenaId)
+                .query('SELECT id FROM ProcenaRizika WHERE id = @procenaId');
 
-        if (procenaCheck.recordset.length === 0) {
-            return NextResponse.json({error: "Procena ne postoji"}, {status: 404});
-        }
+            if (procenaCheck.recordset.length === 0) {
+                throw new Error("Procena ne postoji");
+            }
 
-        // Check if risk selection already exists
-        const existingSelection = await pool.request()
-            .input('procenaId', procenaId)
-            .input('riskId', risk_id)
-            .query('SELECT id FROM RiskSelection WHERE procenaId = @procenaId AND riskId = @riskId');
-
-        if (existingSelection.recordset.length > 0) {
-            // Update existing
-            await pool.request()
+            // Check if risk selection already exists
+            const existingSelection = await pool.request()
                 .input('procenaId', procenaId)
                 .input('riskId', risk_id)
-                .input('dangerLevel', danger_level)
-                .input('description', description || '')
-                .query(`
-                    UPDATE RiskSelection 
-                    SET dangerLevel = @dangerLevel, description = @description, updatedAt = GETDATE()
-                    WHERE procenaId = @procenaId AND riskId = @riskId
-                `);
-        } else {
-            // Create new
-            await pool.request()
-                .input('procenaId', procenaId)
-                .input('riskId', risk_id)
-                .input('dangerLevel', danger_level)
-                .input('description', description || '')
-                .query(`
-                    INSERT INTO RiskSelection (procenaId, riskId, dangerLevel, description, createdAt, updatedAt)
-                    VALUES (@procenaId, @riskId, @dangerLevel, @description, GETDATE(), GETDATE())
-                `);
-        }
+                .query('SELECT id FROM RiskSelection WHERE procenaId = @procenaId AND riskId = @riskId');
+
+            if (existingSelection.recordset.length > 0) {
+                // Update existing
+                await pool.request()
+                    .input('procenaId', procenaId)
+                    .input('riskId', risk_id)
+                    .input('dangerLevel', danger_level)
+                    .input('description', description || '')
+                    .query(`
+                        UPDATE RiskSelection 
+                        SET dangerLevel = @dangerLevel, description = @description, updatedAt = GETDATE()
+                        WHERE procenaId = @procenaId AND riskId = @riskId
+                    `);
+            } else {
+                // Create new
+                await pool.request()
+                    .input('procenaId', procenaId)
+                    .input('riskId', risk_id)
+                    .input('dangerLevel', danger_level)
+                    .input('description', description || '')
+                    .query(`
+                        INSERT INTO RiskSelection (procenaId, riskId, dangerLevel, description, createdAt, updatedAt)
+                        VALUES (@procenaId, @riskId, @dangerLevel, @description, GETDATE(), GETDATE())
+                    `);
+            }
+        });
 
         return NextResponse.json({success: true});
-    } catch (error) {
+    } catch (error: any) {
         console.error("Greška pri čuvanju selekcije rizika:", error);
+        
+        if (error.message === "Procena ne postoji") {
+            return NextResponse.json({error: "Procena ne postoji"}, {status: 404});
+        }
+        
         return NextResponse.json({error: "Greška pri čuvanju podataka"}, {status: 500});
     }
 }
@@ -69,10 +98,12 @@ export async function GET(req: Request, {params}: {params: Promise<{id: string}>
             return NextResponse.json({error: "Nevaljan ID procene"}, {status: 400});
         }
 
-        const pool = await getDbConnection();
-        const result = await pool.request()
-            .input('procenaId', procenaId)
-            .query('SELECT * FROM RiskSelection WHERE procenaId = @procenaId');
+        const result = await executeWithRetry(async () => {
+            const pool = await getDbConnection();
+            return await pool.request()
+                .input('procenaId', procenaId)
+                .query('SELECT * FROM RiskSelection WHERE procenaId = @procenaId');
+        });
 
         return NextResponse.json(result.recordset);
     } catch (error) {
