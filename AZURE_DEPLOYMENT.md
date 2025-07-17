@@ -51,6 +51,13 @@ Go to Azure Portal → App Service → Configuration → Application settings:
 - `DEBUG`: false
 - `ALLOWED_HOSTS`: your-app-name.azurewebsites.net
 
+### 5. Important: Azure App Service Configuration
+
+Make sure your Azure App Service has these settings:
+- **Runtime Stack**: Node.js 20 LTS
+- **Operating System**: Linux
+- **Startup Command**: Leave empty (uses npm start automatically)
+
 ### 5. Deploy
 
 1. **Commit and push** your code to the main/master branch

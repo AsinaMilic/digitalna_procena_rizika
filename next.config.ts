@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
   // Optimize for Azure deployment
   compress: true,
   poweredByHeader: false,
