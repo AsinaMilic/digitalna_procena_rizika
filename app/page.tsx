@@ -20,10 +20,13 @@ export default function Home() {
         const token = localStorage.getItem('token');
         const korisnikData = localStorage.getItem('korisnik');
 
-      if (token && korisnikData) {
-          setKorisnik(JSON.parse(korisnikData));
-      }
-  }, []);
+        if (token && korisnikData) {
+            setKorisnik(JSON.parse(korisnikData));
+        } else {
+            // Ako nema tokena, preusmeri na prijavu
+            router.push('/prijava');
+        }
+    }, [router]);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -33,32 +36,12 @@ export default function Home() {
     };
 
     if (!korisnik) {
+        // Prikaži loading dok se proverava auth status
         return (
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-100">
-                <div className="bg-white/80 backdrop-blur-sm p-12 rounded-3xl shadow-2xl text-center border border-blue-100 max-w-md w-full mx-4">
-                    <div className="mb-8">
-                        <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full mx-auto mb-6 flex items-center justify-center shadow-lg">
-                            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </div>
-                        <h1 className="text-3xl font-bold text-gray-800 mb-2">Dobrodošli!</h1>
-                        <p className="text-gray-600">Pristupite vašem nalogu ili se registrujte</p>
-                    </div>
-                    <div className="space-y-4">
-                        <button
-                            onClick={() => router.push('/prijava')}
-                            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105"
-                        >
-                            Prijava
-                        </button>
-                        <button
-                            onClick={() => router.push('/registracija')}
-                            className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105"
-                        >
-                            Registracija
-                        </button>
-                    </div>
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Učitavanje...</p>
                 </div>
             </div>
         );

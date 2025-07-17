@@ -23,6 +23,8 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
     const [prilogMData, setPrilogMData] = useState<Map<string, PrilogMData>>(new Map());
     const [loading, setLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [saving, setSaving] = useState(false);
 
     // Učitaj postojeće selekcije i Prilog M podatke pri učitavanju komponente
     useEffect(() => {
@@ -146,46 +148,81 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
             onPrilogMUpdate(Array.from(newPrilogMData.values()));
         }
 
-        // Pošalji na backend (prošireno sa Prilog M podacima)
-        try {
-            setLoading(true);
+        // Označi da ima nesačuvanih promena
+        setHasUnsavedChanges(true);
+    };
 
-            // Use Promise.allSettled to handle both requests independently
-            const [selectionResult, prilogMResult] = await Promise.allSettled([
-                fetch(`/api/procena/${procenaId}/risk-selection`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(newSelection)
-                }),
-                fetch(`/api/procena/${procenaId}/prilog-m`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(prilogMItem)
-                })
+    // Batch čuvanje svih promena
+    const handleSaveChanges = async () => {
+        if (!hasUnsavedChanges || saving) {
+            return;
+        }
+
+        setSaving(true);
+        try {
+            // Pripremi podatke za batch čuvanje
+            const selectionsToSave = Array.from(selections.values());
+            const prilogMToSave = Array.from(prilogMData.values());
+
+            // Pošalji sve podatke odjednom
+            const [selectionResults, prilogMResults] = await Promise.allSettled([
+                // Batch čuvanje selekcija
+                Promise.all(selectionsToSave.map(selection =>
+                    fetch(`/api/procena/${procenaId}/risk-selection`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            risk_id: selection.risk_id,
+                            danger_level: selection.danger_level,
+                            description: selection.description
+                        })
+                    })
+                )),
+                // Batch čuvanje Prilog M podataka
+                Promise.all(prilogMToSave.map(item =>
+                    fetch(`/api/procena/${procenaId}/prilog-m`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(item)
+                    })
+                ))
             ]);
 
-            // Check results
-            if (selectionResult.status === 'rejected') {
-                console.error('Greška pri čuvanju selekcije:', selectionResult.reason);
-            } else if (!selectionResult.value.ok) {
-                console.error('Greška pri čuvanju selekcije - HTTP status:', selectionResult.value.status);
+            // Proveri rezultate
+            let hasErrors = false;
+            
+            if (selectionResults.status === 'rejected') {
+                console.error('Greška pri čuvanju selekcija:', selectionResults.reason);
+                hasErrors = true;
+            }
+            
+            if (prilogMResults.status === 'rejected') {
+                console.error('Greška pri čuvanju Prilog M podataka:', prilogMResults.reason);
+                hasErrors = true;
             }
 
-            if (prilogMResult.status === 'rejected') {
-                console.error('Greška pri čuvanju Prilog M podataka:', prilogMResult.reason);
-            } else if (!prilogMResult.value.ok) {
-                const errorText = await prilogMResult.value.text();
-                console.error('Greška pri čuvanju Prilog M podataka - HTTP status:', prilogMResult.value.status, errorText);
+            if (!hasErrors) {
+                setHasUnsavedChanges(false);
+                // Prikaži poruku o uspešnom čuvanju
+                const successDiv = document.createElement('div');
+                successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+                successDiv.textContent = '✅ Промене су успешно сачуване!';
+                document.body.appendChild(successDiv);
+                setTimeout(() => document.body.removeChild(successDiv), 3000);
+            } else {
+                throw new Error('Greška pri čuvanju podataka');
             }
 
         } catch (error) {
-            console.error('Greška pri komunikaciji sa serverom:', error);
+            console.error('Greška pri čuvanju:', error);
+            // Prikaži poruku o grešci
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+            errorDiv.textContent = '❌ Greška pri čuvanju promena!';
+            document.body.appendChild(errorDiv);
+            setTimeout(() => document.body.removeChild(errorDiv), 3000);
         } finally {
-            setLoading(false);
+            setSaving(false);
         }
     };
 
@@ -233,12 +270,49 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
 
     return (
         <div className="bg-white rounded-2xl p-8 shadow-xl border border-blue-100">
-            <h2 className="text-2xl font-bold text-blue-800 mb-6 text-center">
-                Табела за процену ризика - {riskGroupData.name}
-            </h2>
-            <p className="text-blue-600 text-center mb-6">
-                {riskGroupData.description}
-            </p>
+            <div className="flex justify-between items-center mb-6">
+                <div className="flex-1">
+                    <h2 className="text-2xl font-bold text-blue-800 text-center">
+                        Табела за процену ризика - {riskGroupData.name}
+                    </h2>
+                    <p className="text-blue-600 text-center mt-2">
+                        {riskGroupData.description}
+                    </p>
+                </div>
+                
+                {/* Dugme za čuvanje */}
+                {hasUnsavedChanges && (
+                    <div className="ml-4">
+                        <button
+                            onClick={handleSaveChanges}
+                            disabled={saving}
+                            className={`px-6 py-3 rounded-lg font-medium transition-all ${
+                                saving 
+                                    ? 'bg-gray-400 text-white cursor-not-allowed'
+                                    : 'bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl'
+                            }`}
+                        >
+                            {saving ? (
+                                <div className="flex items-center gap-2">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                    Чувам...
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    💾 Сачувај промене
+                                </div>
+                            )}
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {/* Status poruke */}
+            {hasUnsavedChanges && !saving && (
+                <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded-lg text-center border border-yellow-300">
+                    ⚠️ Имате несачуване промене. Кликните "Сачувај промене" да их сачувате.
+                </div>
+            )}
 
             {loading && (
                 <div className="mb-4 p-3 bg-blue-100 text-blue-800 rounded-lg text-center">
