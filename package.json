@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "start": "node .next/standalone/server.js",
+    "start": "node server.js",
     "start:custom": "node server.js",
     "lint": "next lint",
     "db:seed": "curl -X POST http://localhost:3000/api/seed || echo 'Make sure the dev server is running with: npm run dev'",

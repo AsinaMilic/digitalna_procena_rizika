@@ -48,70 +48,30 @@ jobs:
           # Create a clean deployment directory
           mkdir deployment
           
-          # Check if standalone build exists
+          # Verify standalone build exists
           if [ -d ".next/standalone" ]; then
-            echo "Using standalone build..."
-            # Copy standalone build
+            echo "✅ Using standalone build..."
+            
+            # Copy the standalone server and dependencies
             cp -r .next/standalone/* deployment/
-            cp -r .next/static deployment/.next/
+            
+            # Copy static files to the correct location
+            mkdir -p deployment/.next/static
+            cp -r .next/static/* deployment/.next/static/
+            
+            # Copy public files
             cp -r public deployment/
             
-            # Create a simple server.js for standalone
-            cat > deployment/server.js << 'EOF'
-          const { createServer } = require('http')
-          const { parse } = require('url')
-          const next = require('next')
-          
-          const port = process.env.PORT || 3000
-          const app = next({ dev: false })
-          const handle = app.getRequestHandler()
-          
-          app.prepare().then(() => {
-            createServer(async (req, res) => {
-              try {
-                const parsedUrl = parse(req.url, true)
-                await handle(req, res, parsedUrl)
-              } catch (err) {
-                console.error('Error occurred handling', req.url, err)
-                res.statusCode = 500
-                res.end('internal server error')
-              }
-            }).listen(port, () => {
-              console.log(`> Ready on http://localhost:${port}`)
-            })
-          })
-          EOF
+            # The standalone build already includes server.js, so we don't override it
+            echo "✅ Standalone deployment package created"
           else
-            echo "Using regular build..."
-            # Copy regular build files
-            cp package*.json deployment/
-            cp -r .next deployment/
-            cp -r public deployment/
-            cp next.config.ts deployment/
-            cp server.js deployment/
-            cp startup.sh deployment/
-            cp web.config deployment/
-            
-            # Copy API routes and app directory
-            cp -r app deployment/
-            cp -r lib deployment/
-            
-            # Install production dependencies
-            cd deployment
-            npm ci --only=production
-            
-            # Remove unnecessary files to reduce size
-            find node_modules -name "*.md" -delete 2>/dev/null || true
-            find node_modules -name "*.txt" -delete 2>/dev/null || true
-            find node_modules -name "test*" -type d -not -path "*/next/*" -exec rm -rf {} + 2>/dev/null || true
-            find node_modules -name "*.test.js" -not -path "*/next/*" -delete 2>/dev/null || true
-            find node_modules -name "*.spec.js" -not -path "*/next/*" -delete 2>/dev/null || true
-            cd ..
+            echo "❌ Standalone build not found - this shouldn't happen with output: 'standalone'"
+            exit 1
           fi
           
           # Create optimized zip
           cd deployment
-          zip -r ../release.zip . -x "*.git*" "*.env*" "node_modules/.cache/*"
+          zip -r ../release.zip . -x "*.git*" "*.env*"
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
