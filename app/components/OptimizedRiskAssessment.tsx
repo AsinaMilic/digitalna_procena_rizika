@@ -35,106 +35,106 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
     });
     const [loading, setLoading] = useState(false);
 
-    const loadAllData = useCallback(async () => {
-        setLoading(true);
-        try {
-            // Učitaj Prilog M podatke - jedan poziv za sve podatke
-            const response = await fetch(`/api/procena/${procenaId}/prilog-m`);
-            if (response.ok) {
-                const allData = await response.json();
-                console.log('🔍 Učitani podaci iz API-ja:', allData.length, 'stavki');
-                console.log('🔍 Prvi podatak:', allData[0]);
-
-                // Grupiši podatke po grupama
-                const newPrilogMData = new Map<string, PrilogMData[]>();
-
-                // Inicijalizuj sve grupe sa praznim nizovima
-                RISK_GROUPS.forEach(group => {
-                    newPrilogMData.set(group.id, []);
-                });
-
-                // Dodeli podatke odgovarajućim grupama
-                allData.forEach((item: unknown) => {
-                    // Type assertion for database item
-                    const dbItem = item as {
-                        id: string;
-                        groupid?: string;
-                        groupId?: string;
-                        requirement: string;
-                        velicinaopasnosti?: number;
-                        velicinaOpasnosti?: number;
-                        izlozenost: number;
-                        ranjivost: number;
-                        verovatnoca: number;
-                        posledice: number;
-                        steta: number;
-                        kriticnost: number;
-                        nivorizika?: number;
-                        nivoRizika?: number;
-                        kategorijarizika?: number;
-                        kategorijaRizika?: number;
-                        prihvatljivost: 'PRIHVATLJIV' | 'NEPRIHVATLJIV' | null;
-                    };
-
-                    // Mapiranje polja iz baze na očekivani format
-                    const mappedItem: PrilogMData = {
-                        id: dbItem.id,
-                        groupId: dbItem.groupid || dbItem.groupId || '', // Podrška za oba formata
-                        requirement: dbItem.requirement,
-                        velicinaOpasnosti: dbItem.velicinaopasnosti || dbItem.velicinaOpasnosti || null,
-                        izlozenost: dbItem.izlozenost || null,
-                        ranjivost: dbItem.ranjivost || null,
-                        verovatnoca: dbItem.verovatnoca || null,
-                        posledice: dbItem.posledice || null,
-                        steta: dbItem.steta || null,
-                        kriticnost: dbItem.kriticnost || null,
-                        nivoRizika: dbItem.nivorizika || dbItem.nivoRizika || null,
-                        kategorijaRizika: dbItem.kategorijarizika || dbItem.kategorijaRizika || null,
-                        prihvatljivost: dbItem.prihvatljivost
-                    };
-
-                    if (mappedItem.groupId && newPrilogMData.has(mappedItem.groupId)) {
-                        const groupData = newPrilogMData.get(mappedItem.groupId) || [];
-                        groupData.push(mappedItem);
-                        newPrilogMData.set(mappedItem.groupId, groupData);
-                    }
-                });
-
-                console.log('🔍 Grupisani podaci po grupama:');
-                newPrilogMData.forEach((data, groupId) => {
-                    console.log(`  ${groupId}: ${data.length} stavki`);
-                });
-
-                setAllPrilogMData(newPrilogMData);
-                calculateStatistics(newPrilogMData);
-            } else {
-                // Inicijalizuj prazne podatke ako nema odgovora
-                const newPrilogMData = new Map<string, PrilogMData[]>();
-                RISK_GROUPS.forEach(group => {
-                    newPrilogMData.set(group.id, []);
-                });
-                setAllPrilogMData(newPrilogMData);
-                calculateStatistics(newPrilogMData);
-            }
-
-        } catch (error) {
-            console.error('Greška pri učitavanju podataka:', error);
-            // Inicijalizuj prazne podatke u slučaju greške
-            const newPrilogMData = new Map<string, PrilogMData[]>();
-            RISK_GROUPS.forEach(group => {
-                newPrilogMData.set(group.id, []);
-            });
-            setAllPrilogMData(newPrilogMData);
-            calculateStatistics(newPrilogMData);
-        } finally {
-            setLoading(false);
-        }
-    }, [procenaId]);
-
-    // Učitaj postojeće podatke pri inicijalizaciji
+    // Učitaj postojeće podatke pri inicijalizaciji - samo jednom
     useEffect(() => {
+        const loadAllData = async () => {
+            setLoading(true);
+            try {
+                // Učitaj Prilog M podatke - jedan poziv za sve podatke
+                const response = await fetch(`/api/procena/${procenaId}/prilog-m`);
+                if (response.ok) {
+                    const allData = await response.json();
+                    console.log('🔍 Učitani podaci iz API-ja:', allData.length, 'stavki');
+                    console.log('🔍 Prvi podatak:', allData[0]);
+
+                    // Grupiši podatke po grupama
+                    const newPrilogMData = new Map<string, PrilogMData[]>();
+
+                    // Inicijalizuj sve grupe sa praznim nizovima
+                    RISK_GROUPS.forEach(group => {
+                        newPrilogMData.set(group.id, []);
+                    });
+
+                    // Dodeli podatke odgovarajućim grupama
+                    allData.forEach((item: unknown) => {
+                        // Type assertion for database item
+                        const dbItem = item as {
+                            id: string;
+                            groupid?: string;
+                            groupId?: string;
+                            requirement: string;
+                            velicinaopasnosti?: number;
+                            velicinaOpasnosti?: number;
+                            izlozenost: number;
+                            ranjivost: number;
+                            verovatnoca: number;
+                            posledice: number;
+                            steta: number;
+                            kriticnost: number;
+                            nivorizika?: number;
+                            nivoRizika?: number;
+                            kategorijarizika?: number;
+                            kategorijaRizika?: number;
+                            prihvatljivost: 'PRIHVATLJIV' | 'NEPRIHVATLJIV' | null;
+                        };
+
+                        // Mapiranje polja iz baze na očekivani format
+                        const mappedItem: PrilogMData = {
+                            id: dbItem.id,
+                            groupId: dbItem.groupid || dbItem.groupId || '', // Podrška za oba formata
+                            requirement: dbItem.requirement,
+                            velicinaOpasnosti: dbItem.velicinaopasnosti || dbItem.velicinaOpasnosti || null,
+                            izlozenost: dbItem.izlozenost || null,
+                            ranjivost: dbItem.ranjivost || null,
+                            verovatnoca: dbItem.verovatnoca || null,
+                            posledice: dbItem.posledice || null,
+                            steta: dbItem.steta || null,
+                            kriticnost: dbItem.kriticnost || null,
+                            nivoRizika: dbItem.nivorizika || dbItem.nivoRizika || null,
+                            kategorijaRizika: dbItem.kategorijarizika || dbItem.kategorijaRizika || null,
+                            prihvatljivost: dbItem.prihvatljivost
+                        };
+
+                        if (mappedItem.groupId && newPrilogMData.has(mappedItem.groupId)) {
+                            const groupData = newPrilogMData.get(mappedItem.groupId) || [];
+                            groupData.push(mappedItem);
+                            newPrilogMData.set(mappedItem.groupId, groupData);
+                        }
+                    });
+
+                    console.log('🔍 Grupisani podaci po grupama:');
+                    newPrilogMData.forEach((data, groupId) => {
+                        console.log(`  ${groupId}: ${data.length} stavki`);
+                    });
+
+                    setAllPrilogMData(newPrilogMData);
+                    calculateStatistics(newPrilogMData);
+                } else {
+                    // Inicijalizuj prazne podatke ako nema odgovora
+                    const newPrilogMData = new Map<string, PrilogMData[]>();
+                    RISK_GROUPS.forEach(group => {
+                        newPrilogMData.set(group.id, []);
+                    });
+                    setAllPrilogMData(newPrilogMData);
+                    calculateStatistics(newPrilogMData);
+                }
+
+            } catch (error) {
+                console.error('Greška pri učitavanju podataka:', error);
+                // Inicijalizuj prazne podatke u slučaju greške
+                const newPrilogMData = new Map<string, PrilogMData[]>();
+                RISK_GROUPS.forEach(group => {
+                    newPrilogMData.set(group.id, []);
+                });
+                setAllPrilogMData(newPrilogMData);
+                calculateStatistics(newPrilogMData);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         loadAllData();
-    }, [loadAllData]);
+    }, [procenaId]); // Only depend on procenaId, which should be stable
 
     const calculateStatistics = (prilogMData: Map<string, PrilogMData[]>) => {
         let totalItems = 0;
@@ -200,6 +200,15 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
             return newMap;
         });
     }, []);
+
+    // Create stable callbacks for the active group
+    const activeGroupSelectionCallback = useCallback((selections: RiskSelection[]) => {
+        handleSelectionChange(activeGroupId, selections);
+    }, [activeGroupId, handleSelectionChange]);
+
+    const activeGroupPrilogMCallback = useCallback((prilogMData: PrilogMData[]) => {
+        handlePrilogMUpdate(activeGroupId, prilogMData);
+    }, [activeGroupId, handlePrilogMUpdate]);
 
     // Dobij podatke za aktivnu grupu
     const activeGroupData = getRiskGroupData(activeGroupId);
@@ -436,14 +445,49 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                 {/* Aktivna tabela */}
                 {activeGroupData && activeGroupInfo && (
                     <RiskAssessmentTable
+                        key={activeGroupId} // Add key to force remount when group changes
                         procenaId={procenaId}
                         riskGroupData={activeGroupData}
-                        onSelectionChange={(selections) => handleSelectionChange(activeGroupId, selections)}
-                        onPrilogMUpdate={(prilogMData) => handlePrilogMUpdate(activeGroupId, prilogMData)}
+                        onSelectionChange={activeGroupSelectionCallback}
+                        onPrilogMUpdate={activeGroupPrilogMCallback}
                     />
                 )}
 
+                {/* Dugme "Gotovo" - prikazuje se kada su sve grupe završene */}
+                {statistics.completionPercentage === 100 && (
+                    <div className="bg-white rounded-2xl shadow-xl p-6 mt-8">
+                        <div className="text-center">
+                            <div className="mb-4">
+                                <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+                                    <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </div>
+                                <h2 className="text-2xl font-bold text-gray-800 mb-2">🎉 Procena rizika je završena!</h2>
+                                <p className="text-gray-600 mb-6">
+                                    Uspešno ste završili procenu rizika za sve grupe.
+                                    Ukupno je procenjeno {statistics.completedItems} stavki.
+                                </p>
+                            </div>
 
+                            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                                <button
+                                    onClick={exportData}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                >
+                                    📊 Izvezi Rezultate
+                                </button>
+
+                                <button
+                                    onClick={() => window.location.href = '/'}
+                                    className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                >
+                                    ✅ Gotovo - Povratak na početnu
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
             </div>
         </div>

@@ -1,5 +1,6 @@
 import {NextResponse} from "next/server";
 import {getDbConnection} from "../../../../../lib/db";
+import { handleOptions, createCorsResponse } from '../../../../../lib/cors';
 
 async function executeWithRetry<T>(operation: () => Promise<T>, maxRetries = 3): Promise<T> {
     let lastError: Error = new Error('Unknown error');
@@ -24,6 +25,11 @@ async function executeWithRetry<T>(operation: () => Promise<T>, maxRetries = 3):
     throw lastError;
 }
 
+// Handle OPTIONS preflight requests
+export async function OPTIONS() {
+    return handleOptions();
+}
+
 export async function POST(req: Request, {params}: {params: Promise<{id: string}>}) {
     try {
         const {id} = await params;
@@ -31,7 +37,7 @@ export async function POST(req: Request, {params}: {params: Promise<{id: string}
         const {risk_id, danger_level, description} = await req.json();
 
         if (!procenaId || !risk_id || !danger_level) {
-            return NextResponse.json({error: "Nedostaju potrebni podaci"}, {status: 400});
+            return createCorsResponse({error: "Nedostaju potrebni podaci"}, 400);
         }
 
         await executeWithRetry(async () => {
@@ -63,16 +69,16 @@ export async function POST(req: Request, {params}: {params: Promise<{id: string}
             }
         });
 
-        return NextResponse.json({success: true});
+        return createCorsResponse({success: true});
     } catch (error: unknown) {
         console.error("Greška pri čuvanju selekcije rizika:", error);
         const err = error as Error;
         
         if (err.message === "Procena ne postoji") {
-            return NextResponse.json({error: "Procena ne postoji"}, {status: 404});
+            return createCorsResponse({error: "Procena ne postoji"}, 404);
         }
         
-        return NextResponse.json({error: "Greška pri čuvanju podataka"}, {status: 500});
+        return createCorsResponse({error: "Greška pri čuvanju podataka"}, 500);
     }
 }
 
@@ -82,7 +88,7 @@ export async function GET(req: Request, {params}: {params: Promise<{id: string}>
         const procenaId = parseInt(id);
 
         if (!procenaId) {
-            return NextResponse.json({error: "Nevaljan ID procene"}, {status: 400});
+            return createCorsResponse({error: "Nevaljan ID procene"}, 400);
         }
 
         const result = await executeWithRetry(async () => {
@@ -90,9 +96,9 @@ export async function GET(req: Request, {params}: {params: Promise<{id: string}>
             return await pool.query('SELECT * FROM RiskSelection WHERE procenaId = $1', [procenaId]);
         });
 
-        return NextResponse.json(result.rows);
+        return createCorsResponse(result.rows);
     } catch (error) {
         console.error("Greška pri dohvatanju selekcija rizika:", error);
-        return NextResponse.json({error: "Greška pri dohvatanju podataka"}, {status: 500});
+        return createCorsResponse({error: "Greška pri dohvatanju podataka"}, 500);
     }
 }

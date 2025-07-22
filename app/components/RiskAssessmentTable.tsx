@@ -134,7 +134,7 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
         if (procenaId && riskGroupData) {
             loadExistingData();
         }
-    }, [procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate]); // Include all dependencies
+    }, [procenaId, riskGroupData.id]); // Remove callback dependencies to prevent infinite loop
 
     const handleCellClick = async (riskId: string, dangerLevel: number, description: string) => {
         // Prevent multiple clicks on the same cell while loading
