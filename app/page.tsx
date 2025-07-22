@@ -159,7 +159,7 @@ export default function Home() {
                 </div>
 
                 {/* Action Cards */}
-                <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-16">
+                <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-16">
                     <div className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-8 border border-gray-100 hover:border-blue-200">
                         <div className="flex items-center mb-6">
                             <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
@@ -180,6 +180,29 @@ export default function Home() {
                             className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-200 transform hover:scale-[1.02] shadow-lg"
                         >
                             Започни процену
+                        </button>
+                    </div>
+
+                    <div className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-8 border border-gray-100 hover:border-purple-200">
+                        <div className="flex items-center mb-6">
+                            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                </svg>
+                            </div>
+                            <div className="ml-4">
+                                <h3 className="text-xl font-bold text-gray-900">Правна лица</h3>
+                                <p className="text-gray-600">Управљајте правним лицима</p>
+                            </div>
+                        </div>
+                        <p className="text-gray-600 mb-6">
+                            Прегледајте сва правна лица и њихове процене ризика. Креирајте нове процене за постојећа правна лица.
+                        </p>
+                        <button
+                            onClick={() => router.push('/pravna-lica')}
+                            className="w-full bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-200 transform hover:scale-[1.02] shadow-lg"
+                        >
+                            Прегледај правна лица
                         </button>
                     </div>
 

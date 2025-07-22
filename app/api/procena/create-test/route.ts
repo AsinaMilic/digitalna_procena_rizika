@@ -6,44 +6,35 @@ export async function POST() {
         const pool = await getDbConnection();
         
         // Create a test legal entity first
-        const pravnoLiceResult = await pool.request()
-            .input('naziv', 'Test Kompanija d.o.o.')
-            .input('pib', '123456789')
-            .input('adresa', 'Test adresa 123, Beograd')
-            .query(`
-                IF NOT EXISTS (SELECT * FROM PravnaLica WHERE pib = @pib)
-                BEGIN
-                    INSERT INTO PravnaLica (naziv, pib, adresa, telefon, email)
-                    OUTPUT INSERTED.id
-                    VALUES (@naziv, @pib, @adresa, '+381 11 123 4567', 'test@test.com')
-                END
-                ELSE
-                BEGIN
-                    SELECT id FROM PravnaLica WHERE pib = @pib
-                END
-            `);
+        const existingPravnoLice = await pool.query('SELECT id FROM PravnoLice WHERE pib = $1', ['123456789']);
         
-        const pravnoLiceId = pravnoLiceResult.recordset[0]?.id;
+        let pravnoLiceId;
+        if (existingPravnoLice.rows.length > 0) {
+            pravnoLiceId = existingPravnoLice.rows[0].id;
+        } else {
+            const pravnoLiceResult = await pool.query(`
+                INSERT INTO PravnoLice (naziv, pib, adresa, telefon, email)
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING id
+            `, ['Test Kompanija d.o.o.', '123456789', 'Test adresa 123, Beograd', '+381 11 123 4567', 'test@test.com']);
+            pravnoLiceId = pravnoLiceResult.rows[0].id;
+        }
         
         // Get the admin user ID
-        const adminUser = await pool.request()
-            .query('SELECT TOP 1 id FROM korisnici WHERE je_admin = 1');
+        const adminUser = await pool.query('SELECT id FROM korisnici WHERE je_admin = TRUE LIMIT 1');
             
-        if (adminUser.recordset.length === 0) {
+        if (adminUser.rows.length === 0) {
             throw new Error('No admin user found. Please ensure the database is properly initialized.');
         }
         
-        // Create a test risk assessment (without foreign key constraints for now)
-        const procenaResult = await pool.request()
-            .input('naziv', 'Test Procena Rizika')
-            .input('opis', 'Ovo je test procena rizika kreirana automatski za testiranje sistema')
-            .query(`
-                INSERT INTO ProcenaRizika (naziv, opis, status)
-                OUTPUT INSERTED.id
-                VALUES (@naziv, @opis, 'u_toku')
-            `);
+        // Create a test risk assessment
+        const procenaResult = await pool.query(`
+                INSERT INTO ProcenaRizika (naziv, opis, status, pravnoLiceId, korisnikId)
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING id
+            `, ['Test Procena Rizika', 'Ovo je test procena rizika kreirana automatski za testiranje sistema', 'u_toku', pravnoLiceId, adminUser.rows[0].id]);
         
-        const procenaId = procenaResult.recordset[0].id;
+        const procenaId = procenaResult.rows[0].id;
         
         return NextResponse.json({
             success: true,

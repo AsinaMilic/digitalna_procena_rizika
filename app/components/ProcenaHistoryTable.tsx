@@ -97,7 +97,7 @@ export default function ProcenaHistoryTable({ onEditProcena }: ProcenaHistoryTab
             exportContent.style.fontFamily = 'Arial, sans-serif';
 
             const currentDate = new Date().toLocaleDateString('sr-RS');
-            const totalHighRisks = filteredAndSortedProocene.reduce((sum, p) => sum + p.visokoRizicniRizici, 0);
+            const totalHighRisks = filteredAndSortedProocene.reduce((sum, p) => sum + (p.visokoRizicniRizici || 0), 0);
 
             exportContent.innerHTML = `
                 <div style="text-align: center; margin-bottom: 30px;">
@@ -129,7 +129,9 @@ export default function ProcenaHistoryTable({ onEditProcena }: ProcenaHistoryTab
                     </thead>
                     <tbody>
                         ${filteredAndSortedProocene.map(procena => {
-                const procenat = procena.ukupnoRizika > 0 ? (procena.visokoRizicniRizici / procena.ukupnoRizika) * 100 : 0;
+                const safeUkupno = procena.ukupnoRizika || 0;
+                const safeVisoki = procena.visokoRizicniRizici || 0;
+                const procenat = safeUkupno > 0 ? (safeVisoki / safeUkupno) * 100 : 0;
                 let nivoText = 'Безбедно';
                 let nivoColor = '#059669';
                 if (procenat >= 50) {
@@ -148,8 +150,8 @@ export default function ProcenaHistoryTable({ onEditProcena }: ProcenaHistoryTab
                                     <td style="border: 1px solid #d1d5db; padding: 8px; color: #111827;">${procena.naziv}</td>
                                     <td style="border: 1px solid #d1d5db; padding: 8px; color: #111827;">${procena.pib}</td>
                                     <td style="border: 1px solid #d1d5db; padding: 8px; color: #111827;">${new Date(procena.datum).toLocaleDateString('sr-RS')}</td>
-                                    <td style="border: 1px solid #d1d5db; padding: 8px; text-align: center; color: #111827;">${procena.ukupnoRizika}</td>
-                                    <td style="border: 1px solid #d1d5db; padding: 8px; text-align: center; color: #dc2626; font-weight: bold;">${procena.visokoRizicniRizici}</td>
+                                    <td style="border: 1px solid #d1d5db; padding: 8px; text-align: center; color: #111827;">${procena.ukupnoRizika || 0}</td>
+                                    <td style="border: 1px solid #d1d5db; padding: 8px; text-align: center; color: #dc2626; font-weight: bold;">${procena.visokoRizicniRizici || 0}</td>
                                     <td style="border: 1px solid #d1d5db; padding: 8px; text-align: center; color: ${nivoColor}; font-weight: bold;">${nivoText}</td>
                                 </tr>
                             `;
@@ -209,11 +211,14 @@ export default function ProcenaHistoryTable({ onEditProcena }: ProcenaHistoryTab
     };
 
     const getRiskLevelBadge = (visokoRizicni: number, ukupno: number) => {
-        if (ukupno === 0) {
+        const safeVisokoRizicni = visokoRizicni || 0;
+        const safeUkupno = ukupno || 0;
+        
+        if (safeUkupno === 0) {
             return <span className="text-gray-400 text-sm">Нема ризика</span>;
         }
 
-        const procenat = (visokoRizicni / ukupno) * 100;
+        const procenat = (safeVisokoRizicni / safeUkupno) * 100;
 
         if (procenat >= 50) {
             return <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">Висок ризик</span>;
@@ -336,7 +341,7 @@ export default function ProcenaHistoryTable({ onEditProcena }: ProcenaHistoryTab
                     </div>
                     <div className="text-center">
                         <div className="text-2xl font-bold text-red-600">
-                            {procene.reduce((sum, p) => sum + p.visokoRizicniRizici, 0)}
+                            {procene.reduce((sum, p) => sum + (p.visokoRizicniRizici || 0), 0)}
                         </div>
                         <div className="text-sm text-gray-600">Високи ризици</div>
                     </div>
@@ -414,10 +419,10 @@ export default function ProcenaHistoryTable({ onEditProcena }: ProcenaHistoryTab
 
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="text-sm text-gray-900">
-                                        {procena.ukupnoRizika} укупно
+                                        {procena.ukupnoRizika || 0} укупно
                                     </div>
                                     <div className="text-xs text-red-600">
-                                        {procena.visokoRizicniRizici} високих
+                                        {procena.visokoRizicniRizici || 0} високих
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">

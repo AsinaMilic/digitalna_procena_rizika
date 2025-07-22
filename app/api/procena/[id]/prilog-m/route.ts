@@ -3,26 +3,26 @@ import { PrilogMData } from '../../../../data/riskDataLoader';
 import { getDbConnection } from '../../../../../lib/db';
 
 async function executeWithRetry<T>(operation: () => Promise<T>, maxRetries = 3): Promise<T> {
-    let lastError: Error = new Error('Unknown error');
-    
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            return await operation();
-        } catch (error: unknown) {
-            lastError = error as Error;
-            const err = error as { code?: string; message: string };
-            console.log(`Attempt ${attempt} failed:`, err.message);
-            
-            if (attempt < maxRetries && (err.code === 'ECONNCLOSED' || err.code === 'ENOTOPEN')) {
-                console.log(`Retrying in ${attempt * 1000}ms...`);
-                await new Promise(resolve => setTimeout(resolve, attempt * 1000));
-                continue;
-            }
-            break;
-        }
+  let lastError: Error = new Error('Unknown error');
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error: unknown) {
+      lastError = error as Error;
+      const err = error as { code?: string; message: string };
+      console.log(`Attempt ${attempt} failed:`, err.message);
+
+      if (attempt < maxRetries && (err.code === 'ECONNCLOSED' || err.code === 'ENOTOPEN')) {
+        console.log(`Retrying in ${attempt * 1000}ms...`);
+        await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+        continue;
+      }
+      break;
     }
-    
-    throw lastError;
+  }
+
+  throw lastError;
 }
 
 export async function POST(
@@ -46,82 +46,74 @@ export async function POST(
       const pool = await getDbConnection();
 
       // Check if procena exists
-      const procenaCheck = await pool.request()
-        .input('procenaId', procenaId)
-        .query('SELECT id FROM ProcenaRizika WHERE id = @procenaId');
+      const procenaCheck = await pool.query('SELECT id FROM ProcenaRizika WHERE id = $1', [procenaId]);
 
-      if (procenaCheck.recordset.length === 0) {
+      if (procenaCheck.rows.length === 0) {
         throw new Error("Procena ne postoji");
       }
 
       // Check if PrilogM record already exists
-      const existingRecord = await pool.request()
-        .input('procenaId', procenaId)
-        .input('itemId', prilogMItem.id)
-        .input('groupId', prilogMItem.groupId)
-        .query('SELECT id FROM PrilogM WHERE procenaId = @procenaId AND itemId = @itemId AND groupId = @groupId');
+      const existingRecord = await pool.query('SELECT id FROM PrilogM WHERE procenaId = $1 AND itemId = $2 AND groupId = $3', [procenaId, prilogMItem.id, prilogMItem.groupId]);
 
-      if (existingRecord.recordset.length > 0) {
+      if (existingRecord.rows.length > 0) {
         // Update existing record
-        await pool.request()
-          .input('procenaId', procenaId)
-          .input('itemId', prilogMItem.id)
-          .input('groupId', prilogMItem.groupId)
-          .input('requirement', prilogMItem.requirement || '')
-          .input('velicinaOpasnosti', prilogMItem.velicinaOpasnosti)
-          .input('izlozenost', prilogMItem.izlozenost)
-          .input('ranjivost', prilogMItem.ranjivost)
-          .input('verovatnoca', prilogMItem.verovatnoca)
-          .input('steta', prilogMItem.steta)
-          .input('kriticnost', prilogMItem.kriticnost)
-          .input('posledice', prilogMItem.posledice)
-          .input('nivoRizika', prilogMItem.nivoRizika)
-          .input('kategorijaRizika', prilogMItem.kategorijaRizika)
-          .input('prihvatljivost', prilogMItem.prihvatljivost)
-          .query(`
+        await pool.query(`
             UPDATE PrilogM SET
-              requirement = @requirement,
-              velicinaOpasnosti = @velicinaOpasnosti,
-              izlozenost = @izlozenost,
-              ranjivost = @ranjivost,
-              verovatnoca = @verovatnoca,
-              steta = @steta,
-              kriticnost = @kriticnost,
-              posledice = @posledice,
-              nivoRizika = @nivoRizika,
-              kategorijaRizika = @kategorijaRizika,
-              prihvatljivost = @prihvatljivost,
-              updatedAt = GETDATE()
-            WHERE procenaId = @procenaId AND itemId = @itemId AND groupId = @groupId
-          `);
+              requirement = $1,
+              velicinaOpasnosti = $2,
+              izlozenost = $3,
+              ranjivost = $4,
+              verovatnoca = $5,
+              steta = $6,
+              kriticnost = $7,
+              posledice = $8,
+              nivoRizika = $9,
+              kategorijaRizika = $10,
+              prihvatljivost = $11,
+              updatedAt = CURRENT_TIMESTAMP
+            WHERE procenaId = $12 AND itemId = $13 AND groupId = $14
+          `, [
+          prilogMItem.requirement || '',
+          prilogMItem.velicinaOpasnosti,
+          prilogMItem.izlozenost,
+          prilogMItem.ranjivost,
+          prilogMItem.verovatnoca,
+          prilogMItem.steta,
+          prilogMItem.kriticnost,
+          prilogMItem.posledice,
+          prilogMItem.nivoRizika,
+          prilogMItem.kategorijaRizika,
+          prilogMItem.prihvatljivost,
+          procenaId,
+          prilogMItem.id,
+          prilogMItem.groupId
+        ]);
       } else {
         // Create new record
-        await pool.request()
-          .input('procenaId', procenaId)
-          .input('itemId', prilogMItem.id)
-          .input('groupId', prilogMItem.groupId)
-          .input('requirement', prilogMItem.requirement || '')
-          .input('velicinaOpasnosti', prilogMItem.velicinaOpasnosti)
-          .input('izlozenost', prilogMItem.izlozenost)
-          .input('ranjivost', prilogMItem.ranjivost)
-          .input('verovatnoca', prilogMItem.verovatnoca)
-          .input('steta', prilogMItem.steta)
-          .input('kriticnost', prilogMItem.kriticnost)
-          .input('posledice', prilogMItem.posledice)
-          .input('nivoRizika', prilogMItem.nivoRizika)
-          .input('kategorijaRizika', prilogMItem.kategorijaRizika)
-          .input('prihvatljivost', prilogMItem.prihvatljivost)
-          .query(`
+        await pool.query(`
             INSERT INTO PrilogM (
               procenaId, itemId, groupId, requirement, velicinaOpasnosti, izlozenost, ranjivost,
               verovatnoca, steta, kriticnost, posledice, nivoRizika, kategorijaRizika, prihvatljivost,
               createdAt, updatedAt
             ) VALUES (
-              @procenaId, @itemId, @groupId, @requirement, @velicinaOpasnosti, @izlozenost, @ranjivost,
-              @verovatnoca, @steta, @kriticnost, @posledice, @nivoRizika, @kategorijaRizika, @prihvatljivost,
-              GETDATE(), GETDATE()
+              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
             )
-          `);
+          `, [
+          procenaId,
+          prilogMItem.id,
+          prilogMItem.groupId,
+          prilogMItem.requirement || '',
+          prilogMItem.velicinaOpasnosti,
+          prilogMItem.izlozenost,
+          prilogMItem.ranjivost,
+          prilogMItem.verovatnoca,
+          prilogMItem.steta,
+          prilogMItem.kriticnost,
+          prilogMItem.posledice,
+          prilogMItem.nivoRizika,
+          prilogMItem.kategorijaRizika,
+          prilogMItem.prihvatljivost
+        ]);
       }
     });
 
@@ -141,11 +133,11 @@ export async function POST(
   } catch (error: unknown) {
     console.error('Greška pri čuvanju Prilog M podatka:', error);
     const err = error as Error;
-    
+
     if (err.message === "Procena ne postoji") {
       return NextResponse.json({ error: "Procena ne postoji" }, { status: 404 });
     }
-    
+
     return NextResponse.json(
       { error: 'Greška pri čuvanju podataka' },
       { status: 500 }
@@ -167,17 +159,19 @@ export async function GET(
 
     const data = await executeWithRetry(async () => {
       const pool = await getDbConnection();
-      const result = await pool.request()
-        .input('procenaId', procenaId)
-        .query(`
+
+      // Postavi UTF-8 kodiranje za ovu sesiju
+      await pool.query("SET client_encoding TO 'UTF8'");
+
+      const result = await pool.query(`
           SELECT 
             itemId as id, groupId, requirement, velicinaOpasnosti, izlozenost, ranjivost,
             verovatnoca, steta, kriticnost, posledice, nivoRizika, kategorijaRizika, prihvatljivost
           FROM PrilogM 
-          WHERE procenaId = @procenaId
+          WHERE procenaId = $1
           ORDER BY groupId, itemId
-        `);
-      return result.recordset;
+        `, [procenaId]);
+      return result.rows;
     });
 
     return NextResponse.json(data);
@@ -206,17 +200,15 @@ export async function PUT(
 
     const data = await executeWithRetry(async () => {
       const pool = await getDbConnection();
-      const result = await pool.request()
-        .input('procenaId', procenaId)
-        .query(`
+      const result = await pool.query(`
           SELECT 
             itemId as id, groupId, requirement, velicinaOpasnosti, izlozenost, ranjivost,
             verovatnoca, steta, kriticnost, posledice, nivoRizika, kategorijaRizika, prihvatljivost
           FROM PrilogM 
-          WHERE procenaId = @procenaId
+          WHERE procenaId = $1
           ORDER BY groupId, itemId
-        `);
-      return result.recordset;
+        `, [procenaId]);
+      return result.rows;
     });
 
     // Izračunaj statistike

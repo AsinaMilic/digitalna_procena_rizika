@@ -6,24 +6,24 @@ export async function GET() {
         const pool = await getDbConnection();
         
         // Dobij sve procene sa podacima o pravnom licu
-        const result = await pool.request().query(`
+        const result = await pool.query(`
             SELECT 
                 pr.id,
-                pr.datum,
+                pr.createdAt as datum,
                 pr.status,
                 pl.id as pravnoLiceId,
                 pl.naziv,
                 pl.pib,
                 pl.adresa,
-                -- Statistike za svaku procenu
-                (SELECT COUNT(*) FROM RiskSelection rs WHERE rs.procenaId = pr.id) as ukupnoRizika,
-                (SELECT COUNT(*) FROM RiskSelection rs WHERE rs.procenaId = pr.id AND rs.dangerLevel >= 4) as visokoRizicniRizici
+                -- Statistike za svaku procenu iz PrilogM tabele
+                (SELECT COUNT(*)::integer FROM PrilogM pm WHERE pm.procenaId = pr.id) as ukupnoRizika,
+                (SELECT COUNT(*)::integer FROM PrilogM pm WHERE pm.procenaId = pr.id AND pm.kategorijaRizika IN (1, 2)) as visokoRizicniRizici
             FROM ProcenaRizika pr
             INNER JOIN PravnoLice pl ON pr.pravnoLiceId = pl.id
-            ORDER BY pr.datum DESC
+            ORDER BY pr.createdAt DESC
         `);
 
-        return NextResponse.json(result.recordset);
+        return NextResponse.json(result.rows);
     } catch (error) {
         console.error('Greška pri dobijanju procena:', error);
         return NextResponse.json(
@@ -46,21 +46,47 @@ export async function POST(request: NextRequest) {
 
         const pool = await getDbConnection();
         
-        // Kreiraj novu procenu
-        const result = await pool.request()
-            .input('pravnoLiceId', pravnoLiceId)
-            .query(`
-                INSERT INTO ProcenaRizika (pravnoLiceId, datum, status)
-                OUTPUT INSERTED.id, INSERTED.datum, INSERTED.status
-                VALUES (@pravnoLiceId, GETDATE(), 'u_toku')
-            `);
+        // Proveri da li već postoji aktivna procena za ovo pravno lice
+        const existingAssessment = await pool.query(`
+            SELECT id, status FROM ProcenaRizika 
+            WHERE pravnoLiceId = $1 AND status = 'u_toku'
+            ORDER BY createdAt DESC
+            LIMIT 1
+        `, [pravnoLiceId]);
 
-        const novaProcena = result.recordset[0];
+        if (existingAssessment.rows.length > 0) {
+            return NextResponse.json({
+                error: 'Već postoji aktivna procena rizika za ovo pravno lice',
+                existingProcenaId: existingAssessment.rows[0].id
+            }, { status: 400 });
+        }
+        
+        // Get the legal entity name for the assessment title
+        const pravnoLiceResult = await pool.query('SELECT naziv FROM PravnoLice WHERE id = $1', [pravnoLiceId]);
+        
+        if (pravnoLiceResult.rows.length === 0) {
+            return NextResponse.json(
+                { error: 'Pravno lice sa datim ID ne postoji' },
+                { status: 404 }
+            );
+        }
+        
+        const pravnoLiceNaziv = pravnoLiceResult.rows[0].naziv;
+        
+        // Kreiraj novu procenu
+        const result = await pool.query(`
+                INSERT INTO ProcenaRizika (naziv, pravnoLiceId, status)
+                VALUES ($1, $2, 'u_toku')
+                RETURNING id, createdAt, status
+            `, [`Procena rizika - ${pravnoLiceNaziv}`, pravnoLiceId]);
+
+        const novaProcena = result.rows[0];
 
         return NextResponse.json({
-            id: novaProcena.id,
+            success: true,
+            procenaId: novaProcena.id,
             pravnoLiceId: pravnoLiceId,
-            datum: novaProcena.datum,
+            datum: novaProcena.createdAt,
             status: novaProcena.status
         });
     } catch (error) {

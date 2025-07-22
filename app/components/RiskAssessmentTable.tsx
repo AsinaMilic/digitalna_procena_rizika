@@ -59,11 +59,37 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
                     const prilogMMap = new Map<string, PrilogMData>();
 
                     // Filtriraj podatke samo za trenutnu grupu
+                    console.log('🔍 RiskAssessmentTable - učitani Prilog M podaci:', prilogMData.length);
+                    console.log('🔍 RiskAssessmentTable - tražim grupu:', riskGroupData.id);
+                    
                     prilogMData
-                        .filter((item: PrilogMData) => item.groupId === riskGroupData.id)
-                        .forEach((item: PrilogMData) => {
-                            prilogMMap.set(item.id, item);
+                        .filter((item: any) => {
+                            // Mapiranje polja iz baze na očekivani format
+                            const groupId = item.groupid || item.groupId;
+                            console.log('🔍 Item groupId:', groupId, 'vs expected:', riskGroupData.id);
+                            return groupId === riskGroupData.id;
+                        })
+                        .forEach((item: any) => {
+                            // Mapiranje polja iz baze na očekivani format
+                            const mappedItem: PrilogMData = {
+                                id: item.id,
+                                groupId: item.groupid || item.groupId,
+                                requirement: item.requirement,
+                                velicinaOpasnosti: item.velicinaopasnosti || item.velicinaOpasnosti,
+                                izlozenost: item.izlozenost,
+                                ranjivost: item.ranjivost,
+                                verovatnoca: item.verovatnoca,
+                                posledice: item.posledice,
+                                steta: item.steta,
+                                kriticnost: item.kriticnost,
+                                nivoRizika: item.nivorizika || item.nivoRizika,
+                                kategorijaRizika: item.kategorijarizika || item.kategorijaRizika,
+                                prihvatljivost: item.prihvatljivost
+                            };
+                            prilogMMap.set(mappedItem.id, mappedItem);
                         });
+
+                    console.log('🔍 RiskAssessmentTable - filtrirani podaci za grupu:', prilogMMap.size);
 
                     setPrilogMData(prilogMMap);
 
@@ -83,7 +109,7 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
         if (procenaId && riskGroupData) {
             loadExistingData();
         }
-    }, [procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate]); // Dodaj sve dependencies
+    }, [procenaId, riskGroupData.id]); // Only depend on stable values
 
     const handleCellClick = async (riskId: string, dangerLevel: number, description: string) => {
         // Prevent multiple clicks on the same cell while loading
@@ -403,7 +429,7 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
             </div>
 
             {/* Summary sa Prilog M podacima */}
-            {selections.size > 0 && (
+            {(selections.size > 0 || prilogMData.size > 0) && (
                 <div className="mt-6 space-y-4">
                     {/* Prilog M - Kompletna tabela */}
                     {prilogMData.size > 0 && (

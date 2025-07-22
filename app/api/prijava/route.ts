@@ -17,19 +17,16 @@ export async function POST(request: NextRequest) {
         const pool = await getDbConnection();
 
         // Pronalaženje korisnika
-        const result = await pool
-            .request()
-            .input('email', email)
-            .query('SELECT * FROM korisnici WHERE email = @email');
+        const result = await pool.query('SELECT * FROM korisnici WHERE email = $1', [email]);
 
-        if (result.recordset.length === 0) {
+        if (result.rows.length === 0) {
             return NextResponse.json(
                 {greška: 'Pogrešan email ili lozinka'},
                 {status: 401}
             );
         }
 
-        const korisnik = result.recordset[0];
+        const korisnik = result.rows[0];
 
         // Proverava lozinku
         const isPasswordValid = await bcrypt.compare(lozinka, korisnik.lozinka);

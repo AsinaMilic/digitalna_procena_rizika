@@ -38,43 +38,28 @@ export async function POST(req: Request, {params}: {params: Promise<{id: string}
             const pool = await getDbConnection();
 
             // Check if procena exists
-            const procenaCheck = await pool.request()
-                .input('procenaId', procenaId)
-                .query('SELECT id FROM ProcenaRizika WHERE id = @procenaId');
+            const procenaCheck = await pool.query('SELECT id FROM ProcenaRizika WHERE id = $1', [procenaId]);
 
-            if (procenaCheck.recordset.length === 0) {
+            if (procenaCheck.rows.length === 0) {
                 throw new Error("Procena ne postoji");
             }
 
             // Check if risk selection already exists
-            const existingSelection = await pool.request()
-                .input('procenaId', procenaId)
-                .input('riskId', risk_id)
-                .query('SELECT id FROM RiskSelection WHERE procenaId = @procenaId AND riskId = @riskId');
+            const existingSelection = await pool.query('SELECT id FROM RiskSelection WHERE procenaId = $1 AND riskId = $2', [procenaId, risk_id]);
 
-            if (existingSelection.recordset.length > 0) {
+            if (existingSelection.rows.length > 0) {
                 // Update existing
-                await pool.request()
-                    .input('procenaId', procenaId)
-                    .input('riskId', risk_id)
-                    .input('dangerLevel', danger_level)
-                    .input('description', description || '')
-                    .query(`
+                await pool.query(`
                         UPDATE RiskSelection 
-                        SET dangerLevel = @dangerLevel, description = @description, updatedAt = GETDATE()
-                        WHERE procenaId = @procenaId AND riskId = @riskId
-                    `);
+                        SET dangerLevel = $1, description = $2, updatedAt = CURRENT_TIMESTAMP
+                        WHERE procenaId = $3 AND riskId = $4
+                    `, [danger_level, description || '', procenaId, risk_id]);
             } else {
                 // Create new
-                await pool.request()
-                    .input('procenaId', procenaId)
-                    .input('riskId', risk_id)
-                    .input('dangerLevel', danger_level)
-                    .input('description', description || '')
-                    .query(`
+                await pool.query(`
                         INSERT INTO RiskSelection (procenaId, riskId, dangerLevel, description, createdAt, updatedAt)
-                        VALUES (@procenaId, @riskId, @dangerLevel, @description, GETDATE(), GETDATE())
-                    `);
+                        VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    `, [procenaId, risk_id, danger_level, description || '']);
             }
         });
 
@@ -102,12 +87,10 @@ export async function GET(req: Request, {params}: {params: Promise<{id: string}>
 
         const result = await executeWithRetry(async () => {
             const pool = await getDbConnection();
-            return await pool.request()
-                .input('procenaId', procenaId)
-                .query('SELECT * FROM RiskSelection WHERE procenaId = @procenaId');
+            return await pool.query('SELECT * FROM RiskSelection WHERE procenaId = $1', [procenaId]);
         });
 
-        return NextResponse.json(result.recordset);
+        return NextResponse.json(result.rows);
     } catch (error) {
         console.error("Greška pri dohvatanju selekcija rizika:", error);
         return NextResponse.json({error: "Greška pri dohvatanju podataka"}, {status: 500});

@@ -19,13 +19,13 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({greška: 'Nemate admin dozvolu'}, {status: 403});
         }
         const pool = await getDbConnection();
-        const result = await pool.request().query(`
+        const result = await pool.query(`
       SELECT id, email, ime, prezime, status, datum_kreiranja 
       FROM korisnici 
-      WHERE je_admin = 0
+      WHERE je_admin = FALSE
       ORDER BY datum_kreiranja DESC
     `);
-        return NextResponse.json(result.recordset);
+        return NextResponse.json(result.rows);
     } catch (error) {
         console.error('Greška:', error);
         return NextResponse.json({greška: 'Došlo je do greške'}, {status: 500});
@@ -45,17 +45,13 @@ export async function PUT(request: NextRequest) {
         }
         const {korisnikId, status} = await request.json();
         const pool = await getDbConnection();
-        await pool.request()
-            .input('korisnikId', korisnikId)
-            .input('status', status)
-            .input('adminId', decoded.id)
-            .query(`
+        await pool.query(`
         UPDATE korisnici 
-        SET status = @status, 
-            datum_odobrenja = GETDATE(),
-            odobrio_admin = @adminId
-        WHERE id = @korisnikId
-      `);
+        SET status = $1, 
+            datum_odobrenja = CURRENT_TIMESTAMP,
+            odobrio_admin = $2
+        WHERE id = $3
+      `, [status, decoded.id, korisnikId]);
         return NextResponse.json({poruka: 'Uspešno ažurirano'});
     } catch (error) {
         console.error('Greška:', error);

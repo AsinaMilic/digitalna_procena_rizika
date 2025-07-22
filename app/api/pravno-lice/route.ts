@@ -11,30 +11,32 @@ export async function POST(req: Request) {
 
         const pool = await getDbConnection();
 
-        // Insert pravno lice
-        const pravnoLiceResult = await pool.request()
-            .input('naziv', naziv)
-            .input('pib', pib)
-            .input('adresa', adresa || null)
-            .query(`
-                INSERT INTO PravnoLice (naziv, pib, adresa) 
-                OUTPUT INSERTED.id
-                VALUES (@naziv, @pib, @adresa)
-            `);
+        // Check if legal entity with this PIB already exists
+        const existingEntity = await pool.query('SELECT id, naziv FROM PravnoLice WHERE pib = $1', [pib]);
+        
+        if (existingEntity.rows.length > 0) {
+            return NextResponse.json({
+                error: `Pravno lice sa PIB ${pib} već postoji (${existingEntity.rows[0].naziv})`
+            }, {status: 400});
+        }
 
-        const pravnoLiceId = pravnoLiceResult.recordset[0].id;
+        // Insert pravno lice
+        const pravnoLiceResult = await pool.query(`
+                INSERT INTO PravnoLice (naziv, pib, adresa) 
+                VALUES ($1, $2, $3)
+                RETURNING id
+            `, [naziv, pib, adresa || null]);
+
+        const pravnoLiceId = pravnoLiceResult.rows[0].id;
 
         // Create new risk assessment for this legal entity
-        const procenaResult = await pool.request()
-            .input('pravnoLiceId', pravnoLiceId)
-            .input('status', 'u_toku')
-            .query(`
-                INSERT INTO ProcenaRizika (pravnoLiceId, datum, status) 
-                OUTPUT INSERTED.id
-                VALUES (@pravnoLiceId, GETDATE(), @status)
-            `);
+        const procenaResult = await pool.query(`
+                INSERT INTO ProcenaRizika (naziv, pravnoLiceId, status) 
+                VALUES ($1, $2, $3)
+                RETURNING id
+            `, [`Procena rizika - ${naziv}`, pravnoLiceId, 'u_toku']);
 
-        const procenaId = procenaResult.recordset[0].id;
+        const procenaId = procenaResult.rows[0].id;
 
         return NextResponse.json({
             success: true, 
@@ -43,7 +45,21 @@ export async function POST(req: Request) {
         });
     } catch (error) {
         console.error("Greška pri kreiranju pravnog lica:", error);
-        return NextResponse.json({error: "Greška pri čuvanju podataka"}, {status: 500});
+        
+        // Handle specific PostgreSQL errors
+        if (error && typeof error === 'object' && 'code' in error) {
+            const pgError = error as { code: string; constraint?: string };
+            
+            if (pgError.code === '23505' && pgError.constraint === 'pravnolice_pib_key') {
+                return NextResponse.json({
+                    error: "Pravno lice sa ovim PIB brojem već postoji"
+                }, {status: 400});
+            }
+        }
+        
+        return NextResponse.json({
+            error: "Greška pri čuvanju podataka"
+        }, {status: 500});
     }
 }
 
@@ -51,24 +67,24 @@ export async function GET() {
     try {
         const pool = await getDbConnection();
         
-        const result = await pool.request().query(`
+        const result = await pool.query(`
             SELECT 
                 pl.id,
                 pl.naziv,
                 pl.pib,
                 pl.adresa,
                 pr.id as procenaId,
-                pr.datum,
+                pr.createdAt as datum,
                 pr.status
             FROM PravnoLice pl
             LEFT JOIN ProcenaRizika pr ON pl.id = pr.pravnoLiceId
-            ORDER BY pl.id
+            ORDER BY pl.id, pr.createdAt DESC
         `);
 
         // Group the results by pravno lice
         const pravnaLicaMap = new Map();
         
-        result.recordset.forEach(row => {
+        result.rows.forEach(row => {
             if (!pravnaLicaMap.has(row.id)) {
                 pravnaLicaMap.set(row.id, {
                     id: row.id,
@@ -79,9 +95,9 @@ export async function GET() {
                 });
             }
             
-            if (row.procenaId) {
+            if (row.procenaid) { // PostgreSQL vraća lowercase nazive kolona
                 pravnaLicaMap.get(row.id).procene.push({
-                    id: row.procenaId,
+                    id: row.procenaid,
                     datum: row.datum,
                     status: row.status,
                     pravnoLiceId: row.id

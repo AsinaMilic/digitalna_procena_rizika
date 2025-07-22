@@ -19,12 +19,9 @@ export async function POST(request: NextRequest) {
         const pool = await getDbConnection();
 
         // Proverava da li korisnik već postoji
-        const existingUser = await pool
-            .request()
-            .input('email', email)
-            .query('SELECT * FROM korisnici WHERE email = @email');
+        const existingUser = await pool.query('SELECT * FROM korisnici WHERE email = $1', [email]);
 
-        if (existingUser.recordset.length > 0) {
+        if (existingUser.rows.length > 0) {
             return NextResponse.json(
                 { greška: 'Korisnik sa ovim email-om već postoji' },
                 { status: 400 }
@@ -35,16 +32,10 @@ export async function POST(request: NextRequest) {
         const hashedPassword = await bcrypt.hash(lozinka, 10);
 
         // Kreiranje novog korisnika sa statusom na_cekanju
-        await pool
-            .request()
-            .input('email', email)
-            .input('lozinka', hashedPassword)
-            .input('ime', ime)
-            .input('prezime', prezime)
-            .query(`
+        await pool.query(`
         INSERT INTO korisnici (email, lozinka, ime, prezime, status)
-        VALUES (@email, @lozinka, @ime, @prezime, 'na_cekanju')
-      `);
+        VALUES ($1, $2, $3, $4, 'na_cekanju')
+      `, [email, hashedPassword, ime, prezime]);
 
         return NextResponse.json(
             { poruka: 'Uspešno ste se registrovali! Sačekajte odobrenje administratora.' },

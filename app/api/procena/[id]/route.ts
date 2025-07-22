@@ -11,12 +11,10 @@ export async function GET(
         const pool = await getDbConnection();
 
         // Dobij procenu sa podacima o pravnom licu
-        const result = await pool.request()
-            .input('procenaId', procenaId)
-            .query(`
+        const result = await pool.query(`
                 SELECT 
                     pr.id,
-                    pr.datum,
+                    pr.createdAt as datum,
                     pr.status,
                     pl.id as pravnoLiceId,
                     pl.naziv,
@@ -24,17 +22,17 @@ export async function GET(
                     pl.adresa
                 FROM ProcenaRizika pr
                 INNER JOIN PravnoLice pl ON pr.pravnoLiceId = pl.id
-                WHERE pr.id = @procenaId
-            `);
+                WHERE pr.id = $1
+            `, [procenaId]);
 
-        if (result.recordset.length === 0) {
+        if (result.rows.length === 0) {
             return NextResponse.json(
                 { error: 'Procena nije pronađena' },
                 { status: 404 }
             );
         }
 
-        return NextResponse.json(result.recordset[0]);
+        return NextResponse.json(result.rows[0]);
     } catch (error) {
         console.error('Greška pri dobijanju procene:', error);
         return NextResponse.json(
@@ -53,38 +51,27 @@ export async function DELETE(
         const procenaId = id;
         const pool = await getDbConnection();
 
-        // Počni transakciju
-        const transaction = pool.transaction();
-        await transaction.begin();
-
+        // Start transaction
+        const client = await pool.connect();
+        
         try {
-            // Obriši povezane podatke
-            await transaction.request()
-                .input('procenaId', procenaId)
-                .query('DELETE FROM RiskSelection WHERE procenaId = @procenaId');
+            await client.query('BEGIN');
 
-            await transaction.request()
-                .input('procenaId', procenaId)
-                .query('DELETE FROM RiskRegister WHERE procenaId = @procenaId');
+            // Delete related data (PrilogM has CASCADE delete, so it will be deleted automatically)
+            await client.query('DELETE FROM RiskSelection WHERE procenaId = $1', [procenaId]);
 
-            await transaction.request()
-                .input('procenaId', procenaId)
-                .query('DELETE FROM UnosRizika WHERE procenaId = @procenaId');
+            // Delete main assessment
+            const result = await client.query('DELETE FROM ProcenaRizika WHERE id = $1', [procenaId]);
 
-            // Obriši glavnu procenu
-            const result = await transaction.request()
-                .input('procenaId', procenaId)
-                .query('DELETE FROM ProcenaRizika WHERE id = @procenaId');
-
-            if (result.rowsAffected[0] === 0) {
-                await transaction.rollback();
+            if (result.rowCount === 0) {
+                await client.query('ROLLBACK');
                 return NextResponse.json(
                     { error: 'Procena nije pronađena' },
                     { status: 404 }
                 );
             }
 
-            await transaction.commit();
+            await client.query('COMMIT');
 
             return NextResponse.json({
                 success: true,
@@ -92,8 +79,10 @@ export async function DELETE(
             });
 
         } catch (error) {
-            await transaction.rollback();
+            await client.query('ROLLBACK');
             throw error;
+        } finally {
+            client.release();
         }
 
     } catch (error) {
@@ -123,16 +112,13 @@ export async function PUT(
 
         const pool = await getDbConnection();
 
-        const result = await pool.request()
-            .input('procenaId', procenaId)
-            .input('status', status)
-            .query(`
+        const result = await pool.query(`
                 UPDATE ProcenaRizika 
-                SET status = @status
-                WHERE id = @procenaId
-            `);
+                SET status = $1
+                WHERE id = $2
+            `, [status, procenaId]);
 
-        if (result.rowsAffected[0] === 0) {
+        if (result.rowCount === 0) {
             return NextResponse.json(
                 { error: 'Procena nije pronađena' },
                 { status: 404 }

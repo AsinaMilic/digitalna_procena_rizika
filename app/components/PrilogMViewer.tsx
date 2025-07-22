@@ -41,7 +41,7 @@ export default function PrilogMViewer({ procenaId, title = "ПРИLOG М - Ни�
 
     useEffect(() => {
         loadPrilogMData();
-    }, [loadPrilogMData]);
+    }, [procenaId]); // Depend directly on procenaId instead of loadPrilogMData
 
     const calculateStatistics = (data: PrilogMData[]) => {
         const totalItems = data.length;

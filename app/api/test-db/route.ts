@@ -6,24 +6,25 @@ export async function GET() {
         const pool = await getDbConnection();
         
         // Test basic connection
-        const result = await pool.request().query('SELECT GETDATE() as currentTime, @@VERSION as version');
+        const result = await pool.query('SELECT NOW() as currentTime, version() as version');
         
         // Check if our tables exist
-        const tablesCheck = await pool.request().query(`
-            SELECT TABLE_NAME 
-            FROM INFORMATION_SCHEMA.TABLES 
-            WHERE TABLE_TYPE = 'BASE TABLE' 
-            AND TABLE_NAME IN ('korisnici', 'ProcenaRizika', 'RiskSelection', 'PrilogM', 'PravnaLica')
-            ORDER BY TABLE_NAME
+        const tablesCheck = await pool.query(`
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_type = 'BASE TABLE' 
+            AND table_schema = 'public'
+            AND table_name IN ('korisnici', 'procenarizika', 'riskselection', 'prilogm', 'pravnolice')
+            ORDER BY table_name
         `);
         
         return NextResponse.json({
             success: true,
-            message: 'Database connection successful',
-            serverTime: result.recordset[0].currentTime,
-            sqlVersion: result.recordset[0].version.split('\n')[0], // First line only
-            existingTables: tablesCheck.recordset.map(row => row.TABLE_NAME),
-            connectionStatus: pool.connected ? 'Connected' : 'Disconnected'
+            message: 'Xata PostgreSQL connection successful',
+            serverTime: result.rows[0].currenttime,
+            pgVersion: result.rows[0].version.split(' ')[0] + ' ' + result.rows[0].version.split(' ')[1],
+            existingTables: tablesCheck.rows.map(row => row.table_name),
+            connectionInfo: 'Xata PostgreSQL Database'
         });
         
     } catch (error) {

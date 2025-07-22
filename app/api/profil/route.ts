@@ -28,29 +28,19 @@ export async function PUT(request: NextRequest) {
         const pool = await getDbConnection();
 
         // Proveri da li email već postoji (osim za trenutnog korisnika)
-        const existingUserResult = await pool.request()
-            .input('email', email)
-            .input('korisnikId', decoded.id)
-            .query('SELECT id FROM korisnici WHERE email = @email AND id != @korisnikId');
+        const existingUserResult = await pool.query('SELECT id FROM korisnici WHERE email = $1 AND id != $2', [email, decoded.id]);
 
-        if (existingUserResult.recordset.length > 0) {
+        if (existingUserResult.rows.length > 0) {
             return NextResponse.json({ greška: 'Email adresa već postoji' }, { status: 400 });
         }
 
         // Ažuriraj korisnika
-        await pool.request()
-            .input('ime', ime)
-            .input('prezime', prezime)
-            .input('email', email)
-            .input('korisnikId', decoded.id)
-            .query('UPDATE korisnici SET ime = @ime, prezime = @prezime, email = @email WHERE id = @korisnikId');
+        await pool.query('UPDATE korisnici SET ime = $1, prezime = $2, email = $3 WHERE id = $4', [ime, prezime, email, decoded.id]);
 
         // Vrati ažurirane podatke
-        const updatedUserResult = await pool.request()
-            .input('korisnikId', decoded.id)
-            .query('SELECT id, email, ime, prezime, je_admin FROM korisnici WHERE id = @korisnikId');
+        const updatedUserResult = await pool.query('SELECT id, email, ime, prezime, je_admin FROM korisnici WHERE id = $1', [decoded.id]);
 
-        const updatedUser = updatedUserResult.recordset[0];
+        const updatedUser = updatedUserResult.rows[0];
 
         return NextResponse.json({
             poruka: 'Profil je uspešno ažuriran',

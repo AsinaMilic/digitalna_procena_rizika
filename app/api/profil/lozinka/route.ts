@@ -33,15 +33,13 @@ export async function PUT(request: NextRequest) {
         const pool = await getDbConnection();
 
         // Pronađi korisnika
-        const korisnikResult = await pool.request()
-            .input('korisnikId', decoded.id)
-            .query('SELECT id, lozinka FROM korisnici WHERE id = @korisnikId');
+        const korisnikResult = await pool.query('SELECT id, lozinka FROM korisnici WHERE id = $1', [decoded.id]);
 
-        if (korisnikResult.recordset.length === 0) {
+        if (korisnikResult.rows.length === 0) {
             return NextResponse.json({ greška: 'Korisnik nije pronađen' }, { status: 404 });
         }
 
-        const korisnik = korisnikResult.recordset[0];
+        const korisnik = korisnikResult.rows[0];
 
         // Proveri trenutnu lozinku
         const isCurrentPasswordValid = await bcrypt.compare(trenutnaLozinka, korisnik.lozinka);
@@ -53,10 +51,7 @@ export async function PUT(request: NextRequest) {
         const hashedNewPassword = await bcrypt.hash(novaLozinka, 10);
 
         // Ažuriraj lozinku
-        await pool.request()
-            .input('novaLozinka', hashedNewPassword)
-            .input('korisnikId', decoded.id)
-            .query('UPDATE korisnici SET lozinka = @novaLozinka WHERE id = @korisnikId');
+        await pool.query('UPDATE korisnici SET lozinka = $1 WHERE id = $2', [hashedNewPassword, decoded.id]);
 
         return NextResponse.json({
             poruka: 'Lozinka je uspešno promenjena'

@@ -1,159 +1,151 @@
-import sql from 'mssql';
+import { Pool } from 'pg';
 
-const config: sql.config = {
-    user: process.env.DB_USER!,
-    password: process.env.DB_PASSWORD!,
-    server: process.env.DB_HOST!,
-    database: process.env.DB_NAME!,
-    port: parseInt(process.env.DB_PORT || '1433'),
-    options: {
-        encrypt: true,
-        trustServerCertificate: false,
-    },
-    pool: {
-        max: 10,
-        min: 0,
-        idleTimeoutMillis: 30000,
-    },
-    connectionTimeout: 60000,
-    requestTimeout: 60000,
-};
-
-let pool: sql.ConnectionPool | null = null;
+let pool: Pool | null = null;
 
 export async function getDbConnection() {
-    if (!pool || !pool.connected) {
-        if (pool) {
-            try {
-                await pool.close();
-            } catch (error) {
-                console.log('Error closing existing pool:', error);
-            }
-        }
-        
-        pool = new sql.ConnectionPool(config);
-        
-        pool.on('error', (err) => {
-            console.error('Database pool error:', err);
-            pool = null;
-        });
-        
-        await pool.connect();
+  if (!pool) {
+    const connectionString = process.env.DATABASE_URL_POSTGRES;
+
+    if (!connectionString) {
+      throw new Error('DATABASE_URL_POSTGRES environment variable is not set');
     }
-    return pool;
+
+    // Connection established to Xata PostgreSQL
+
+    pool = new Pool({
+      connectionString: connectionString,
+      ssl: {
+        rejectUnauthorized: false
+      },
+      max: 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 60000,
+    });
+
+    // Postavi UTF-8 kodiranje za sve konekcije
+    pool.on('connect', async (client) => {
+      try {
+        await client.query("SET client_encoding TO 'UTF8'");
+      } catch (err) {
+        console.error('Error setting client encoding:', err);
+      }
+    });
+
+    pool.on('error', (err) => {
+      console.error('Database pool error:', err);
+    });
+  }
+  
+  return pool;
 }
 
 // Kreiranje tabele korisnika sa statusom i automatski admin ako ne postoji
 export async function createUsersTable() {
-    const pool = await getDbConnection();
+  const pool = await getDbConnection();
 
-    // Kreiranje tabele korisnika
-    await pool.request().query(`
-      IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='korisnici' AND xtype='U')
-      CREATE TABLE korisnici (
-        id INT IDENTITY(1,1) PRIMARY KEY,
-        email NVARCHAR(255) UNIQUE NOT NULL,
-        lozinka NVARCHAR(255) NOT NULL,
-        ime NVARCHAR(100) NOT NULL,
-        prezime NVARCHAR(100) NOT NULL,
-        status NVARCHAR(20) DEFAULT 'na_cekanju' NOT NULL,
-        je_admin BIT DEFAULT 0,
-        datum_kreiranja DATETIME DEFAULT GETDATE(),
-        datum_odobrenja DATETIME NULL,
-        odobrio_admin INT NULL
+  // Kreiranje tabele korisnika
+  await pool.query(`
+      CREATE TABLE IF NOT EXISTS korisnici (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        lozinka VARCHAR(255) NOT NULL,
+        ime VARCHAR(100) NOT NULL,
+        prezime VARCHAR(100) NOT NULL,
+        status VARCHAR(20) DEFAULT 'na_cekanju' NOT NULL,
+        je_admin BOOLEAN DEFAULT FALSE,
+        datum_kreiranja TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        datum_odobrenja TIMESTAMP NULL,
+        odobrio_admin INTEGER NULL
       )
     `);
 
-    // Proverava da li postoji admin
-    const adminExists = await pool.request().query(`
-      SELECT COUNT(*) as count FROM korisnici WHERE je_admin = 1
+  // Proverava da li postoji admin
+  const adminExists = await pool.query(`
+      SELECT COUNT(*) as count FROM korisnici WHERE je_admin = TRUE
     `);
-    if (adminExists.recordset[0].count === 0) {
-        const bcrypt = await import('bcryptjs');
-        const adminPassword = await bcrypt.hash('admin123', 10);
-        await pool.request().query(`
+  if (parseInt(adminExists.rows[0].count) === 0) {
+    const bcrypt = await import('bcryptjs');
+    const adminPassword = await bcrypt.hash('admin123', 10);
+    await pool.query(`
         INSERT INTO korisnici (email, lozinka, ime, prezime, status, je_admin)
-        VALUES ('admin@admin.com', '${adminPassword}', 'Admin', 'Administrator', 'odobren', 1)
-      `);
-    }
+        VALUES ('admin@admin.com', $1, 'Admin', 'Administrator', 'odobren', TRUE)
+      `, [adminPassword]);
+  }
 }
 
 // Kreiranje tabela za procenu rizika
 export async function createRiskAssessmentTables() {
-    const pool = await getDbConnection();
+  const pool = await getDbConnection();
 
-    // Kreiranje tabele ProcenaRizika
-    await pool.request().query(`
-      IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='ProcenaRizika' AND xtype='U')
-      CREATE TABLE ProcenaRizika (
-        id INT IDENTITY(1,1) PRIMARY KEY,
-        naziv NVARCHAR(255) NOT NULL,
-        opis NVARCHAR(MAX),
-        korisnikId INT,
-        pravnoLiceId INT,
-        status NVARCHAR(50) DEFAULT 'u_toku',
-        createdAt DATETIME DEFAULT GETDATE(),
-        updatedAt DATETIME DEFAULT GETDATE(),
-        FOREIGN KEY (korisnikId) REFERENCES korisnici(id)
+  // Kreiranje tabele PravnoLice prvo (jer je referisana od strane ProcenaRizika)
+  await pool.query(`
+      CREATE TABLE IF NOT EXISTS PravnoLice (
+        id SERIAL PRIMARY KEY,
+        naziv VARCHAR(255) NOT NULL,
+        pib VARCHAR(20) UNIQUE NOT NULL,
+        adresa VARCHAR(500),
+        telefon VARCHAR(50),
+        email VARCHAR(255),
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    // Kreiranje tabele RiskSelection
-    await pool.request().query(`
-      IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='RiskSelection' AND xtype='U')
-      CREATE TABLE RiskSelection (
-        id INT IDENTITY(1,1) PRIMARY KEY,
-        procenaId INT NOT NULL,
-        riskId NVARCHAR(50) NOT NULL,
-        dangerLevel INT NOT NULL,
-        description NVARCHAR(MAX),
-        createdAt DATETIME DEFAULT GETDATE(),
-        updatedAt DATETIME DEFAULT GETDATE(),
+  // Kreiranje tabele ProcenaRizika
+  await pool.query(`
+      CREATE TABLE IF NOT EXISTS ProcenaRizika (
+        id SERIAL PRIMARY KEY,
+        naziv VARCHAR(255) NOT NULL,
+        opis TEXT,
+        korisnikId INTEGER,
+        pravnoLiceId INTEGER,
+        status VARCHAR(50) DEFAULT 'u_toku',
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (korisnikId) REFERENCES korisnici(id),
+        FOREIGN KEY (pravnoLiceId) REFERENCES PravnoLice(id)
+      )
+    `);
+
+  // Kreiranje tabele RiskSelection
+  await pool.query(`
+      CREATE TABLE IF NOT EXISTS RiskSelection (
+        id SERIAL PRIMARY KEY,
+        procenaId INTEGER NOT NULL,
+        riskId VARCHAR(50) NOT NULL,
+        dangerLevel INTEGER NOT NULL,
+        description TEXT,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (procenaId) REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
         UNIQUE(procenaId, riskId)
       )
     `);
 
-    // Kreiranje tabele PrilogM
-    await pool.request().query(`
-      IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='PrilogM' AND xtype='U')
-      CREATE TABLE PrilogM (
-        id INT IDENTITY(1,1) PRIMARY KEY,
-        procenaId INT NOT NULL,
-        itemId NVARCHAR(50) NOT NULL,
-        groupId NVARCHAR(50) NOT NULL,
-        requirement NVARCHAR(MAX),
-        velicinaOpasnosti INT,
-        izlozenost INT,
-        ranjivost INT,
-        verovatnoca INT,
-        steta INT,
-        kriticnost INT,
-        posledice INT,
-        nivoRizika INT,
-        kategorijaRizika INT,
-        prihvatljivost NVARCHAR(50),
-        createdAt DATETIME DEFAULT GETDATE(),
-        updatedAt DATETIME DEFAULT GETDATE(),
+  // Kreiranje tabele PrilogM
+  await pool.query(`
+      CREATE TABLE IF NOT EXISTS PrilogM (
+        id SERIAL PRIMARY KEY,
+        procenaId INTEGER NOT NULL,
+        itemId VARCHAR(50) NOT NULL,
+        groupId VARCHAR(50) NOT NULL,
+        requirement TEXT,
+        velicinaOpasnosti INTEGER,
+        izlozenost INTEGER,
+        ranjivost INTEGER,
+        verovatnoca INTEGER,
+        steta INTEGER,
+        kriticnost INTEGER,
+        posledice INTEGER,
+        nivoRizika INTEGER,
+        kategorijaRizika INTEGER,
+        prihvatljivost VARCHAR(50),
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (procenaId) REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
         UNIQUE(procenaId, itemId, groupId)
       )
     `);
 
-    // Kreiranje tabele PravnoLice
-    await pool.request().query(`
-      IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='PravnoLice' AND xtype='U')
-      CREATE TABLE PravnoLice (
-        id INT IDENTITY(1,1) PRIMARY KEY,
-        naziv NVARCHAR(255) NOT NULL,
-        pib NVARCHAR(20) UNIQUE NOT NULL,
-        adresa NVARCHAR(500),
-        telefon NVARCHAR(50),
-        email NVARCHAR(255),
-        createdAt DATETIME DEFAULT GETDATE(),
-        updatedAt DATETIME DEFAULT GETDATE()
-      )
-    `);
-
-    console.log('✅ Risk assessment tables created successfully');
+  console.log('✅ Risk assessment tables created successfully');
 }

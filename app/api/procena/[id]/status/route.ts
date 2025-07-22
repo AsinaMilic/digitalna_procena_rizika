@@ -29,16 +29,13 @@ export async function PUT(
         const pool = await getDbConnection();
         
         // Ažuriraj status procene
-        const result = await pool.request()
-            .input('procenaId', procenaId)
-            .input('status', status)
-            .query(`
+        const result = await pool.query(`
                 UPDATE ProcenaRizika 
-                SET status = @status
-                WHERE id = @procenaId
-            `);
+                SET status = $1
+                WHERE id = $2
+            `, [status, procenaId]);
 
-        if (result.rowsAffected[0] === 0) {
+        if (result.rowCount === 0) {
             return NextResponse.json(
                 { error: 'Procena nije pronađena' },
                 { status: 404 }
