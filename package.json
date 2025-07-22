@@ -8,7 +8,8 @@
     "start": "node server.js",
     "lint": "next lint",
     "db:init": "tsx scripts/init-db.ts",
-    "db:seed": "curl -X POST http://localhost:3000/api/seed"
+    "db:seed": "curl -X POST http://localhost:3000/api/seed",
+    "db:update-prilog-m": "tsx scripts/update-prilog-m-schema.ts"
   },
   "dependencies": {
     "@types/html2canvas": "^0.5.35",

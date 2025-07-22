@@ -5,6 +5,7 @@ import { RISK_GROUPS } from '../data/riskGroups';
 import { getRiskGroupData } from '../data/riskDataLoader';
 import { PrilogMData } from '../data/riskDataLoader';
 import RiskAssessmentTable from './RiskAssessmentTable';
+import FinancialDataForm from './FinancialDataForm';
 
 interface RiskSelection {
     risk_id: string;
@@ -34,6 +35,7 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
         riskCategories: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
     });
     const [loading, setLoading] = useState(false);
+    const [showFinancialForm, setShowFinancialForm] = useState(false);
 
     // Učitaj postojeće podatke pri inicijalizaciji - samo jednom
     useEffect(() => {
@@ -296,12 +298,20 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                             </div>
                         </div>
 
-                        <button
-                            onClick={exportData}
-                            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
-                        >
-                            📊 Izvezi Podatke
-                        </button>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setShowFinancialForm(true)}
+                                className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
+                            >
+                                💰 Finansijski podaci
+                            </button>
+                            <button
+                                onClick={exportData}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
+                            >
+                                📊 Izvezi Podatke
+                            </button>
+                        </div>
                     </div>
 
                     {/* Statistike */}
@@ -487,6 +497,18 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                             </div>
                         </div>
                     </div>
+                )}
+
+                {/* Modal za finansijske podatke */}
+                {showFinancialForm && (
+                    <FinancialDataForm
+                        procenaId={procenaId}
+                        onSave={(data) => {
+                            console.log('Finansijski podaci sačuvani:', data);
+                            // Možda treba da se osvežе podaci
+                        }}
+                        onClose={() => setShowFinancialForm(false)}
+                    />
                 )}
 
             </div>

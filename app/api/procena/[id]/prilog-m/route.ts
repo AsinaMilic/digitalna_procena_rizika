@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrilogMData } from '../../../../data/riskDataLoader';
+import { PrilogMData, validatePrilogMData, calculateStvarnaSteta, calculateVerovatnoMaksimalnaSteta } from '../../../../data/riskDataLoader';
 import { getDbConnection } from '../../../../../lib/db';
 
 async function executeWithRetry<T>(operation: () => Promise<T>, maxRetries = 3): Promise<T> {
@@ -46,6 +46,15 @@ export async function POST(
       );
     }
 
+    // Validacija Prilog M podataka prema standardu
+    const validation = validatePrilogMData(prilogMItem);
+    if (!validation.isValid) {
+      return NextResponse.json(
+        { error: 'Nevalidni podaci', details: validation.errors },
+        { status: 400 }
+      );
+    }
+
     await executeWithRetry(async () => {
       const pool = await getDbConnection();
 
@@ -58,6 +67,10 @@ export async function POST(
 
       // Check if PrilogM record already exists
       const existingRecord = await pool.query('SELECT id FROM PrilogM WHERE procenaId = $1 AND itemId = $2 AND groupId = $3', [procenaId, prilogMItem.id, prilogMItem.groupId]);
+
+      // Izračunaj dodatne vrednosti prema standardu
+      const stepenSS = calculateStvarnaSteta(0, 1000000); // Default vrednosti - treba proširiti
+      const { vmsh, stepenVMSH } = calculateVerovatnoMaksimalnaSteta(5000000, prilogMItem.velicinaOpasnosti || 3, 'default');
 
       if (existingRecord.rows.length > 0) {
         // Update existing record
@@ -74,8 +87,11 @@ export async function POST(
               nivoRizika = $9,
               kategorijaRizika = $10,
               prihvatljivost = $11,
+              stepenSS = $12,
+              stepenVMSH = $13,
+              vmshIznos = $14,
               updatedAt = CURRENT_TIMESTAMP
-            WHERE procenaId = $12 AND itemId = $13 AND groupId = $14
+            WHERE procenaId = $15 AND itemId = $16 AND groupId = $17
           `, [
           prilogMItem.requirement || '',
           prilogMItem.velicinaOpasnosti,
@@ -88,6 +104,9 @@ export async function POST(
           prilogMItem.nivoRizika,
           prilogMItem.kategorijaRizika,
           prilogMItem.prihvatljivost,
+          stepenSS,
+          stepenVMSH,
+          vmsh,
           procenaId,
           prilogMItem.id,
           prilogMItem.groupId
@@ -98,9 +117,9 @@ export async function POST(
             INSERT INTO PrilogM (
               procenaId, itemId, groupId, requirement, velicinaOpasnosti, izlozenost, ranjivost,
               verovatnoca, steta, kriticnost, posledice, nivoRizika, kategorijaRizika, prihvatljivost,
-              createdAt, updatedAt
+              stepenSS, stepenVMSH, vmshIznos, createdAt, updatedAt
             ) VALUES (
-              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
             )
           `, [
           procenaId,
@@ -116,7 +135,10 @@ export async function POST(
           prilogMItem.posledice,
           prilogMItem.nivoRizika,
           prilogMItem.kategorijaRizika,
-          prilogMItem.prihvatljivost
+          prilogMItem.prihvatljivost,
+          stepenSS,
+          stepenVMSH,
+          vmsh
         ]);
       }
     });
@@ -170,7 +192,8 @@ export async function GET(
       const result = await pool.query(`
           SELECT 
             itemId as id, groupId, requirement, velicinaOpasnosti, izlozenost, ranjivost,
-            verovatnoca, steta, kriticnost, posledice, nivoRizika, kategorijaRizika, prihvatljivost
+            verovatnoca, steta, kriticnost, posledice, nivoRizika, kategorijaRizika, prihvatljivost,
+            stepenSS, stepenVMSH, vmshIznos
           FROM PrilogM 
           WHERE procenaId = $1
           ORDER BY groupId, itemId
@@ -207,7 +230,8 @@ export async function PUT(
       const result = await pool.query(`
           SELECT 
             itemId as id, groupId, requirement, velicinaOpasnosti, izlozenost, ranjivost,
-            verovatnoca, steta, kriticnost, posledice, nivoRizika, kategorijaRizika, prihvatljivost
+            verovatnoca, steta, kriticnost, posledice, nivoRizika, kategorijaRizika, prihvatljivost,
+            stepenSS, stepenVMSH, vmshIznos
           FROM PrilogM 
           WHERE procenaId = $1
           ORDER BY groupId, itemId

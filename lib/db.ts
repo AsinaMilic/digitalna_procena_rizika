@@ -140,6 +140,17 @@ export async function createRiskAssessmentTables() {
         nivoRizika INTEGER,
         kategorijaRizika INTEGER,
         prihvatljivost VARCHAR(50),
+        -- Dodatni podaci za kalkulacije prema standardu
+        stepenIzlozenosti INTEGER DEFAULT 3,
+        stepenRanjivosti INTEGER DEFAULT 3,
+        stvarnaSteta DECIMAL(15,2) DEFAULT 0,
+        poslovniPrihodi DECIMAL(15,2) DEFAULT 1000000,
+        vrednostImovine DECIMAL(15,2) DEFAULT 5000000,
+        delatnost VARCHAR(100) DEFAULT 'default',
+        -- Kalkulisane vrednosti
+        stepenSS INTEGER,
+        stepenVMSH INTEGER,
+        vmshIznos DECIMAL(15,2),
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (procenaId) REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
