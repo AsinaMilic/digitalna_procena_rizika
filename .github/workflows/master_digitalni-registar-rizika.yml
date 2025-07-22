@@ -1,4 +1,4 @@
-# Optimized deployment for Azure Web App - digitalni-registar-rizika
+# Standard Next.js deployment for Azure Web App - digitalni-registar-rizika
 
 name: Build and deploy Node.js app to Azure Web App - digitalni-registar-rizika
 
@@ -36,42 +36,32 @@ jobs:
         run: |
           echo "Checking build output..."
           ls -la .next/
-          echo "Checking if standalone build exists..."
-          if [ -d ".next/standalone" ]; then
-            echo "✅ Standalone build found"
-          else
-            echo "ℹ️ No standalone build (normal for default setup)"
-          fi
+          echo "✅ Standard Next.js build completed"
 
-      - name: Create deployment package (standalone)
+      - name: Create deployment package
         run: |
-          # Create a clean deployment directory
-          mkdir deployment
+          # Create deployment package with all necessary files
+          echo "Creating deployment package..."
           
-          # Verify standalone build exists
-          if [ -d ".next/standalone" ]; then
-            echo "✅ Using standalone build..."
-            
-            # Copy the standalone server and dependencies
-            cp -r .next/standalone/* deployment/
-            
-            # Copy static files to the correct location
-            mkdir -p deployment/.next/static
-            cp -r .next/static/* deployment/.next/static/
-            
-            # Copy public files
-            cp -r public deployment/
-            
-            # The standalone build already includes server.js, so we don't override it
-            echo "✅ Standalone deployment package created"
-          else
-            echo "❌ Standalone build not found - this shouldn't happen with output: 'standalone'"
-            exit 1
-          fi
+          # Create optimized zip excluding unnecessary files
+          zip -r release.zip . \
+            -x "*.git*" \
+            -x "*.env*" \
+            -x "node_modules/.cache/*" \
+            -x ".next/cache/*" \
+            -x "*.log" \
+            -x "coverage/*" \
+            -x "test/*" \
+            -x "tests/*" \
+            -x "__tests__/*" \
+            -x "*.test.js" \
+            -x "*.test.ts" \
+            -x "*.spec.js" \
+            -x "*.spec.ts" \
+            -x "README.md" \
+            -x "docs/*"
           
-          # Create optimized zip
-          cd deployment
-          zip -r ../release.zip . -x "*.git*" "*.env*"
+          echo "✅ Deployment package created"
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
