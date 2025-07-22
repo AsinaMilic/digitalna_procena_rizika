@@ -36,6 +36,13 @@ jobs:
         run: |
           echo "Checking build output..."
           ls -la .next/
+          echo "Checking server.js..."
+          if [ -f "server.js" ]; then
+            echo "✅ server.js found"
+          else
+            echo "❌ server.js missing"
+            exit 1
+          fi
           echo "✅ Standard Next.js build completed"
 
       - name: Create deployment package
