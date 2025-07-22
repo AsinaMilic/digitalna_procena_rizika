@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "node .next/standalone/server.js",
     "lint": "next lint",
     "db:init": "tsx scripts/init-db.ts",
     "db:seed": "curl -X POST http://localhost:3000/api/seed"
