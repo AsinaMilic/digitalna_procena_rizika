@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrilogMData, validatePrilogMData, calculateStvarnaSteta, calculateVerovatnoMaksimalnaSteta } from '../../../../data/riskDataLoader';
+import { PrilogMData, calculateStvarnaSteta, calculateVerovatnoMaksimalnaSteta } from '../../../../data/riskDataLoader';
 import { getDbConnection } from '../../../../../lib/db';
 
 async function executeWithRetry<T>(operation: () => Promise<T>, maxRetries = 3): Promise<T> {
@@ -46,11 +46,10 @@ export async function POST(
       );
     }
 
-    // Validacija Prilog M podataka prema standardu
-    const validation = validatePrilogMData(prilogMItem);
-    if (!validation.isValid) {
+    // Osnovna validacija podataka
+    if (prilogMItem.velicinaOpasnosti && (prilogMItem.velicinaOpasnosti < 1 || prilogMItem.velicinaOpasnosti > 5)) {
       return NextResponse.json(
-        { error: 'Nevalidni podaci', details: validation.errors },
+        { error: 'Veličina opasnosti mora biti između 1 i 5' },
         { status: 400 }
       );
     }

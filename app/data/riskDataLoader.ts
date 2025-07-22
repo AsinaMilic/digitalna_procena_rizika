@@ -19,43 +19,44 @@ export interface PrilogMData {
   velicinaOpasnosti: number | null; // Kolona 3 - iz korisničkog unosa
   izlozenost: number | null; // Kolona 4 - (Si + VO)/2
   ranjivost: number | null; // Kolona 5 - (Sr + VO)/2
-  verovatnoca: number | null; // Kolona 6 - I × R (iz matrice)
-  posledice: number | null; // Kolona 7 - Š × K (iz matrice)
-  steta: number | null; // Kolona 8 - (SŠ + VMŠ)/2
-  kriticnost: number | null; // Kolona 9 - prema kriterijumu
+  verovatnoca: number | null; // Kolona 6 - I × R (iz matrice N.5)
+  steta: number | null; // Kolona 7 - (SŠ + VMŠ)/2
+  kriticnost: number | null; // Kolona 8 - prema kriterijumu
+  posledice: number | null; // Kolona 9 - Š × K (iz matrice Nj.3)
   nivoRizika: number | null; // Kolona 10 - V × P (iz matrice)
   kategorijaRizika: number | null; // Kolona 11 - prema tabeli P.1
   prihvatljivost: 'PRIHVATLJIV' | 'NEPRIHVATLJIV' | null; // Kolona 12 - prema tabeli P.2
 }
 
-// Matrice za računanje (iz priloga N, Nj, O, P)
+// Matrice za računanje (iz priloga N, Nj, O, P) - PREMA STANDARDU SRPS A.L2.003:2025
 export const MATRICE = {
   // Matrica za verovatnoću (Prilog N, tabela N.5)
-  // RANJIVOST (redovi) vs IZLOŽENOST (kolone)
+  // IZLOŽENOST (redovi) vs RANJIVOST (kolone)
+  // NAPOMENA: Prema upustvu В = И (kol. 4) # Р (kol. 5)
   verovatnoca: [
-    [1, 2, 3, 4, 5], // Ranjivost 1 (vrlo velika) vs Izloženost 1-5 (zanemarljiva-trajna)
-    [3, 2, 1, 1, 1], // Ranjivost 2 (velika)
-    [4, 3, 2, 2, 1], // Ranjivost 3 (srednja)
-    [5, 4, 3, 3, 2], // Ranjivost 4 (mala)
-    [5, 5, 4, 3, 3]  // Ranjivost 5 (vrlo mala)
+    [3, 2, 1, 1, 1], // Izloženost 1 (zanemarljiva) vs Ranjivost 1-5 (vrlo velika-vrlo mala)
+    [4, 3, 2, 2, 1], // Izloženost 2 (povremena)
+    [5, 4, 3, 2, 2], // Izloženost 3 (duga)
+    [5, 4, 3, 3, 3], // Izloženost 4 (pretežna)
+    [5, 5, 4, 3, 3]  // Izloženost 5 (trajna)
   ],
-  
+
   // Matrica za posledice (Prilog Nj, tabela Nj.3)
   // ŠTETA (redovi) vs KRITIČNOST (kolone)
   posledice: [
-    [1, 1, 1, 1, 1], // Šteta 1 (vrlo mala) vs Kritičnost 1-5 (vrlo velika-minimalna)
-    [3, 2, 2, 1, 1], // Šteta 2 (mala)
-    [4, 3, 2, 2, 2], // Šteta 3 (srednja)
+    [3, 2, 1, 1, 1], // Šteta 1 (vrlo mala) vs Kritičnost 1-5 (vrlo velika-vrlo mala)
+    [4, 3, 2, 2, 1], // Šteta 2 (mala)
+    [5, 4, 3, 2, 2], // Šteta 3 (srednja)
     [5, 4, 3, 3, 3], // Šteta 4 (velika)
     [5, 5, 4, 3, 3]  // Šteta 5 (vrlo velika)
   ],
-  
+
   // Matrica za nivo rizika (Prilog O, tabela O.2)
   // VEROVATNOĆA (redovi) vs POSLEDICE (kolone)
   nivoRizika: [
-    [1, 2, 3, 4, 5],   // Verovatnoća 1 (retko) vs Posledice 1-5
-    [2, 4, 6, 8, 10],  // Verovatnoća 2 (malo verovatno)
-    [3, 6, 9, 12, 15], // Verovatnoća 3 (umereno verovatno)
+    [1, 2, 3, 4, 5],    // Verovatnoća 1 (retko) vs Posledice 1-5
+    [2, 4, 6, 8, 10],   // Verovatnoća 2 (malo verovatno)
+    [3, 6, 9, 12, 15],  // Verovatnoća 3 (umereno verovatno)
     [4, 8, 12, 16, 20], // Verovatnoća 4 (verovatno)
     [5, 10, 15, 20, 25] // Verovatnoća 5 (skoro sigurno)
   ]
@@ -70,7 +71,7 @@ export const UTICAJ_DELATNOSTI: { [key: string]: number } = {
   'proizvodnja_metala': 0.20,
   'proizvodnja_masina': 0.18,
   'proizvodnja_vozila': 0.22,
-  
+
   // Usluge
   'trgovina_na_malo': 0.10,
   'trgovina_na_veliko': 0.12,
@@ -80,13 +81,13 @@ export const UTICAJ_DELATNOSTI: { [key: string]: number } = {
   'osiguranje': 0.10,
   'informaticke_usluge': 0.12,
   'konsalting': 0.08,
-  
+
   // Javni sektor
   'javna_uprava': 0.06,
   'obrazovanje': 0.08,
   'zdravstvo': 0.15,
   'socijalna_zastita': 0.10,
-  
+
   // Ostalo
   'gradjevinarstvo': 0.22,
   'energetika': 0.25,
@@ -106,7 +107,7 @@ export const KRITERIJUMI_STETE = {
     { min: 15, max: 20, stepen: 4 },    // > 15% ≤ 20% - velika
     { min: 20, max: 100, stepen: 5 }    // > 20% - vrlo velika
   ],
-  
+
   // Verovatno maksimalna šteta (VMŠ) - u odnosu na vrednost imovine
   verovatnoMaksimalnaSteta: [
     { min: 0, max: 5, stepen: 1 },      // ≤ 5% - vrlo mala
@@ -138,24 +139,36 @@ export function getKategorijaRizika(nivoRizika: number): number {
 
 // Prihvatljivost rizika (Prilog P, tabela P.2)
 export function getPrihvatljivost(nivoRizika: number): 'PRIHVATLJIV' | 'NEPRIHVATLJIV' {
-  return [1, 2, 3, 4, 5].includes(nivoRizika) ? 'PRIHVATLJIV' : 'NEPRIHVATLJIV';
+  // PRIHVATLJIV: nivoi rizika 1, 2, 3, 4 i 5
+  const prihvatljiviNivoi = [1, 2, 3, 4, 5];
+  // NEPRIHVATLJIV: nivoi rizika 6, 8, 9, 10, 12, 15, 16, 20 i 25
+  const neprihvatljiviNivoi = [6, 8, 9, 10, 12, 15, 16, 20, 25];
+
+  if (prihvatljiviNivoi.includes(nivoRizika)) {
+    return 'PRIHVATLJIV';
+  } else if (neprihvatljiviNivoi.includes(nivoRizika)) {
+    return 'NEPRIHVATLJIV';
+  } else {
+    // Fallback za neočekivane nivoe - tretiramo kao neprihvatljive
+    return 'NEPRIHVATLJIV';
+  }
 }
 
 // Funkcije za računanje štete prema standardu
 export function calculateStvarnaSteta(
-  stetnIznos: number, 
+  stetnIznos: number,
   poslovniPrihodi: number
 ): number {
   if (poslovniPrihodi === 0) return 1;
-  
+
   const procenat = (stetnIznos / poslovniPrihodi) * 100;
-  
-  for (const kriterijum of KRITERIJUMI_STETE.stvarnaSteta) {
-    if (procenat > kriterijum.min && procenat <= kriterijum.max) {
-      return kriterijum.stepen;
-    }
-  }
-  return 1; // default
+
+  // Prema standardu: ≤ 5%, > 5% ≤ 10%, > 10% ≤ 15%, > 15% ≤ 20%, > 20%
+  if (procenat <= 5) return 1;
+  if (procenat <= 10) return 2;
+  if (procenat <= 15) return 3;
+  if (procenat <= 20) return 4;
+  return 5; // > 20%
 }
 
 export function calculateVerovatnoMaksimalnaSteta(
@@ -165,32 +178,34 @@ export function calculateVerovatnoMaksimalnaSteta(
 ): { vmsh: number, stepenVMSH: number } {
   // Iud - indeks uticaja delatnosti
   const iud = UTICAJ_DELATNOSTI[delatnost] || UTICAJ_DELATNOSTI.default;
-  
+
   // Kvo - koeficijent na osnovu VO (10%, 15%, 20%, 25%, 30%)
   const kvoMapping = { 1: 0.10, 2: 0.15, 3: 0.20, 4: 0.25, 5: 0.30 };
   const kvo = kvoMapping[velicinaOpasnosti as keyof typeof kvoMapping] || 0.20;
-  
+
   // Ivo = Iud × Kvo
   const ivo = iud * kvo;
-  
+
   // VMŠ = SVnpoz × Ivo
   const vmsh = vrednostImovine * ivo;
-  
+
   // Stepen VMŠ na osnovu procenta od vrednosti imovine
-  const procenat = (vmsh / vrednostImovine) * 100;
-  
+  // NAPOMENA: Ivo je već procenat, tako da je vmsh = vrednostImovine * procenat
+  // Procenat VMŠ od vrednosti imovine je upravo Ivo * 100
+  const procenat = ivo * 100;
+
+  // Stepen VMŠ prema istim kriterijumima kao SŠ
   let stepenVMSH = 1;
-  for (const kriterijum of KRITERIJUMI_STETE.verovatnoMaksimalnaSteta) {
-    if (procenat > kriterijum.min && procenat <= kriterijum.max) {
-      stepenVMSH = kriterijum.stepen;
-      break;
-    }
-  }
-  
+  if (procenat <= 5) stepenVMSH = 1;
+  else if (procenat <= 10) stepenVMSH = 2;
+  else if (procenat <= 15) stepenVMSH = 3;
+  else if (procenat <= 20) stepenVMSH = 4;
+  else stepenVMSH = 5;
+
   return { vmsh, stepenVMSH };
 }
 
-// Glavna funkcija za računanje Prilog M podataka - POTPUNO PREMA STANDARDU
+// Glavna funkcija za računanje Prilog M podataka - POTPUNO PREMA STANDARDU SRPS A.L2.003:2025
 export function calculatePrilogM(
   velicinaOpasnosti: number,
   stepenIzlozenosti: number = 3,
@@ -199,41 +214,94 @@ export function calculatePrilogM(
   poslovniPrihodi: number = 1000000, // default 1M RSD
   vrednostImovine: number = 5000000, // default 5M RSD
   delatnost: string = 'default',
-  kriticnost: number = 3
+  kriticnost: number = 3,
+  enableLogging: boolean = false
 ): Partial<PrilogMData> {
-  
-  // KOLONA 4: Izloženost = (Si + VO)/2
+
+  if (enableLogging) {
+    console.log('🧮 POČETAK KALKULACIJE PREMA SRPS A.L2.003:2025');
+    console.log('📊 Ulazni parametri:', {
+      velicinaOpasnosti,
+      stepenIzlozenosti,
+      stepenRanjivosti,
+      stvarnaSteta,
+      poslovniPrihodi,
+      vrednostImovine,
+      delatnost,
+      kriticnost
+    });
+  }
+
+  // KOLONA 4: Izloženost = (Si + VO)/2 - Prilog M, upustvo kolona 4
   const izlozenost = Math.round((stepenIzlozenosti + velicinaOpasnosti) / 2);
-  
-  // KOLONA 5: Ranjivost = (Sr + VO)/2  
+  if (enableLogging) {
+    console.log(`📐 KOLONA 4 - Izloženost: (${stepenIzlozenosti} + ${velicinaOpasnosti})/2 = ${izlozenost}`);
+  }
+
+  // KOLONA 5: Ranjivost = (Sr + VO)/2 - Prilog M, upustvo kolona 5
   const ranjivost = Math.round((stepenRanjivosti + velicinaOpasnosti) / 2);
-  
-  // KOLONA 6: Verovatnoća = I × R (iz matrice N.5)
-  const verovatnocaIndex = Math.min(Math.max(ranjivost - 1, 0), 4);
+  if (enableLogging) {
+    console.log(`🛡️ KOLONA 5 - Ranjivost: (${stepenRanjivosti} + ${velicinaOpasnosti})/2 = ${ranjivost}`);
+  }
+
+  // KOLONA 6: Verovatnoća = И × Р (iz matrice N.5) - Prilog N, tabela N.5
+  // NAPOMENA: Prema upustvu В = И (kol. 4) # Р (kol. 5) - Izloženost × Ranjivost
   const izlozenostIndex = Math.min(Math.max(izlozenost - 1, 0), 4);
-  const verovatnoca = MATRICE.verovatnoca[verovatnocaIndex][izlozenostIndex];
-  
-  // KOLONA 8: Šteta = (SŠ + VMŠ)/2
+  const ranjivostIndex = Math.min(Math.max(ranjivost - 1, 0), 4);
+  const verovatnoca = MATRICE.verovatnoca[izlozenostIndex][ranjivostIndex];
+  if (enableLogging) {
+    console.log(`🎯 KOLONA 6 - Verovatnoća: Matrica[${izlozenostIndex}][${ranjivostIndex}] = ${verovatnoca}`);
+    console.log(`   Izloženost ${izlozenost} × Ranjivost ${ranjivost} → Verovatnoća ${verovatnoca}`);
+  }
+
+  // KOLONA 7: Šteta = (SŠ + VMŠ)/2 - Prilog M, upustvo kolona 7
   const stepenSS = calculateStvarnaSteta(stvarnaSteta, poslovniPrihodi);
-  const { stepenVMSH } = calculateVerovatnoMaksimalnaSteta(vrednostImovine, velicinaOpasnosti, delatnost);
+  const { vmsh, stepenVMSH } = calculateVerovatnoMaksimalnaSteta(vrednostImovine, velicinaOpasnosti, delatnost);
   const steta = Math.round((stepenSS + stepenVMSH) / 2);
-  
-  // KOLONA 7: Posledice = Š × K (iz matrice Nj.3)
+  if (enableLogging) {
+    console.log(`💰 KOLONA 7 - Šteta:`);
+    console.log(`   SŠ (Stvarna šteta): ${stepenSS} (${stvarnaSteta} RSD od ${poslovniPrihodi} RSD)`);
+    console.log(`   VMŠ (Verovatno maks. šteta): ${stepenVMSH} (${vmsh.toFixed(0)} RSD)`);
+    console.log(`   Šteta: (${stepenSS} + ${stepenVMSH})/2 = ${steta}`);
+  }
+
+  // KOLONA 8: Kritičnost - unosi se direktno prema kriterijumu iz Priloga Nj, tabela Nj.2
+  if (enableLogging) {
+    console.log(`🔥 KOLONA 8 - Kritičnost: ${kriticnost} (uneto)`);
+  }
+
+  // KOLONA 9: Posledice = Ш × К (iz matrice Nj.3) - Prilog Nj, tabela Nj.3
+  // NAPOMENA: Prema upustvu П = Ш (kol. 7) # К (kol. 8) - Šteta × Kritičnost
   const stetaIndex = Math.min(Math.max(steta - 1, 0), 4);
   const kriticnostIndex = Math.min(Math.max(kriticnost - 1, 0), 4);
   const posledice = MATRICE.posledice[stetaIndex][kriticnostIndex];
-  
-  // KOLONA 10: Nivo rizika = V × P (iz matrice O.2)
+  if (enableLogging) {
+    console.log(`⚡ KOLONA 9 - Posledice: Matrica[${stetaIndex}][${kriticnostIndex}] = ${posledice}`);
+    console.log(`   Šteta ${steta} × Kritičnost ${kriticnost} → Posledice ${posledice}`);
+  }
+
+  // KOLONA 10: Nivo rizika = V × P (iz matrice O.2) - Prilog O, tabela O.2
   const verovatnocaIndexNR = Math.min(Math.max(verovatnoca - 1, 0), 4);
   const poslediceIndexNR = Math.min(Math.max(posledice - 1, 0), 4);
   const nivoRizika = MATRICE.nivoRizika[verovatnocaIndexNR][poslediceIndexNR];
-  
-  // KOLONA 11: Kategorija rizika (prema tabeli P.1)
+  if (enableLogging) {
+    console.log(`🎲 KOLONA 10 - Nivo rizika: Matrica[${verovatnocaIndexNR}][${poslediceIndexNR}] = ${nivoRizika}`);
+    console.log(`   Verovatnoća ${verovatnoca} × Posledice ${posledice} → Nivo rizika ${nivoRizika}`);
+  }
+
+  // KOLONA 11: Kategorija rizika (prema tabeli P.1) - Prilog P, tabela P.1
   const kategorijaRizika = getKategorijaRizika(nivoRizika);
-  
-  // KOLONA 12: Prihvatljivost (prema tabeli P.2)
+  if (enableLogging) {
+    console.log(`📊 KOLONA 11 - Kategorija rizika: ${kategorijaRizika} (za nivo ${nivoRizika})`);
+  }
+
+  // KOLONA 12: Prihvatljivost (prema tabeli P.2) - Prilog P, tabela P.2
   const prihvatljivost = getPrihvatljivost(nivoRizika);
-  
+  if (enableLogging) {
+    console.log(`✅ KOLONA 12 - Prihvatljivost: ${prihvatljivost} (za nivo ${nivoRizika})`);
+    console.log('🏁 KRAJ KALKULACIJE\n');
+  }
+
   return {
     velicinaOpasnosti,
     izlozenost,
@@ -248,71 +316,34 @@ export function calculatePrilogM(
   };
 }
 
-// Funkcija za validaciju Prilog M podataka
-export function validatePrilogMData(data: Partial<PrilogMData>): { isValid: boolean; errors: string[] } {
-  const errors: string[] = [];
-  
-  // Proveri da li su svi podaci u validnom opsegu (1-5)
-  const fieldsToCheck = ['velicinaOpasnosti', 'izlozenost', 'ranjivost', 'verovatnoca', 'posledice', 'steta', 'kriticnost'];
-  
-  fieldsToCheck.forEach(field => {
-    const value = data[field as keyof typeof data] as number;
-    if (value !== null && value !== undefined && (value < 1 || value > 5)) {
-      errors.push(`${field} mora biti između 1 i 5, trenutno je ${value}`);
-    }
-  });
-  
-  // Proveri nivo rizika (1-25)
-  if (data.nivoRizika !== null && data.nivoRizika !== undefined) {
-    if (data.nivoRizika < 1 || data.nivoRizika > 25) {
-      errors.push(`Nivo rizika mora biti između 1 i 25, trenutno je ${data.nivoRizika}`);
-    }
-  }
-  
-  // Proveri kategoriju rizika (1-5)
-  if (data.kategorijaRizika !== null && data.kategorijaRizika !== undefined) {
-    if (data.kategorijaRizika < 1 || data.kategorijaRizika > 5) {
-      errors.push(`Kategorija rizika mora biti između 1 i 5, trenutno je ${data.kategorijaRizika}`);
-    }
-  }
-  
-  // Proveri prihvatljivost
-  if (data.prihvatljivost && !['PRIHVATLJIV', 'NEPRIHVATLJIV'].includes(data.prihvatljivost)) {
-    errors.push(`Prihvatljivost mora biti 'PRIHVATLJIV' ili 'NEPRIHVATLJIV', trenutno je ${data.prihvatljivost}`);
-  }
-  
-  return {
-    isValid: errors.length === 0,
-    errors
-  };
-}
+
 
 // Funkcija za učitavanje podataka grupe rizika
 export function getRiskGroupData(groupId: string): RiskGroupData | null {
-    switch (groupId) {
-        case 'group1':
-            return GROUP1_DATA;
-        case 'group2':
-            return GROUP2_DATA;
-        case 'group3':
-            return GROUP3_DATA;
-        case 'group4':
-            return GROUP4_DATA;
-        case 'group5':
-            return GROUP5_DATA;
-        case 'group6':
-            return GROUP6_DATA;
-        case 'group7':
-            return GROUP7_DATA;
-        case 'group8':
-            return GROUP8_DATA;
-        case 'group9':
-            return GROUP9_DATA;
-        case 'group10':
-            return GROUP10_DATA;
-        case 'group11':
-            return GROUP11_DATA;
-        default:
-            return null;
-    }
+  switch (groupId) {
+    case 'group1':
+      return GROUP1_DATA;
+    case 'group2':
+      return GROUP2_DATA;
+    case 'group3':
+      return GROUP3_DATA;
+    case 'group4':
+      return GROUP4_DATA;
+    case 'group5':
+      return GROUP5_DATA;
+    case 'group6':
+      return GROUP6_DATA;
+    case 'group7':
+      return GROUP7_DATA;
+    case 'group8':
+      return GROUP8_DATA;
+    case 'group9':
+      return GROUP9_DATA;
+    case 'group10':
+      return GROUP10_DATA;
+    case 'group11':
+      return GROUP11_DATA;
+    default:
+      return null;
+  }
 }

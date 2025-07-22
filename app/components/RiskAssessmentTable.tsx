@@ -166,17 +166,38 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
         newSelections.set(riskId, newSelection);
         setSelections(newSelections);
 
-        // Automatski izračunaj Prilog M podatke PREMA STANDARDU
+        // Učitaj finansijske podatke za tačnu kalkulaciju
+        let financialData = {
+            poslovniPrihodi: 1000000,
+            vrednostImovine: 5000000,
+            delatnost: 'default',
+            stvarnaSteta: 0
+        };
+
+        try {
+            const finResponse = await fetch(`/api/procena/${procenaId}/financial-data`);
+            if (finResponse.ok) {
+                const finData = await finResponse.json();
+                financialData = { ...financialData, ...finData };
+            }
+        } catch (error) {
+            console.warn('Koriste se default finansijski podaci:', error);
+        }
+
+        // Automatski izračunaj Prilog M podatke PREMA STANDARDU SRPS A.L2.003:2025
         const calculatedData = calculatePrilogM(
-            dangerLevel,    // velicinaOpasnosti iz korisničkog klika
-            3,              // stepenIzlozenosti (default - može se proširiti kroz UI)
-            3,              // stepenRanjivosti (default - može se proširiti kroz UI)
-            0,              // stvarnaSteta (default - treba dodati unos)
-            1000000,        // poslovniPrihodi (default 1M RSD - treba dodati unos)
-            5000000,        // vrednostImovine (default 5M RSD - treba dodati unos)
-            'default',      // delatnost (default - treba dodati izbor)
-            3               // kriticnost (default - može se proširiti kroz UI)
+            dangerLevel,                    // velicinaOpasnosti iz korisničkog klika
+            3,                             // stepenIzlozenosti (default - može se proširiti kroz UI)
+            3,                             // stepenRanjivosti (default - može se proširiti kroz UI)
+            financialData.stvarnaSteta,    // stvarnaSteta iz finansijskih podataka
+            financialData.poslovniPrihodi, // poslovniPrihodi iz finansijskih podataka
+            financialData.vrednostImovine, // vrednostImovine iz finansijskih podataka
+            financialData.delatnost,       // delatnost iz finansijskih podataka
+            3,                             // kriticnost (default - može se proširiti kroz UI)
+            true                           // enableLogging - za debug
         );
+
+        console.log('🔍 Kalkulacija završena za:', riskId, 'sa rezultatom:', calculatedData);
 
         const prilogMItem: PrilogMData = {
             id: riskId,

@@ -30,7 +30,7 @@ export default function FinancialDataForm({ procenaId, initialData, onSave, onCl
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    
+
     try {
       // Sačuvaj finansijske podatke
       const response = await fetch(`/api/procena/${procenaId}/financial-data`, {
@@ -76,7 +76,7 @@ export default function FinancialDataForm({ procenaId, initialData, onSave, onCl
             </h2>
             <button
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+              className="text-gray-600 hover:text-gray-800 text-2xl font-bold"
             >
               ×
             </button>
@@ -85,15 +85,15 @@ export default function FinancialDataForm({ procenaId, initialData, onSave, onCl
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Poslovni prihodi */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-800 mb-2">
                 Poslovni prihodi (AOP 1001) - RSD
               </label>
               <input
                 type="number"
                 value={formData.poslovniPrihodi}
                 onChange={(e) => handleChange('poslovniPrihodi', parseInt(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="1000000"
+                className="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800"
+                placeholder="Унесите пословне приходе (нпр. 1.000.000)"
                 required
               />
               <p className="text-xs text-gray-900 mt-1">
@@ -103,15 +103,15 @@ export default function FinancialDataForm({ procenaId, initialData, onSave, onCl
 
             {/* Vrednost imovine */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-800 mb-2">
                 Vrednost imovine (SVnpoz) - RSD
               </label>
               <input
                 type="number"
                 value={formData.vrednostImovine}
                 onChange={(e) => handleChange('vrednostImovine', parseInt(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="5000000"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800"
+                placeholder="Унесите вредност имовине (нпр. 5.000.000)"
                 required
               />
               <p className="text-xs text-gray-900 mt-1">
@@ -121,13 +121,13 @@ export default function FinancialDataForm({ procenaId, initialData, onSave, onCl
 
             {/* Delatnost */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-800 mb-2">
                 Delatnost organizacije
               </label>
               <select
                 value={formData.delatnost}
                 onChange={(e) => handleChange('delatnost', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                 required
               >
                 {delatnostiOptions.map(option => (
@@ -143,15 +143,15 @@ export default function FinancialDataForm({ procenaId, initialData, onSave, onCl
 
             {/* Stvarna šteta */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-800 mb-2">
                 Stvarna šteta (SŠ) - RSD
               </label>
               <input
                 type="number"
                 value={formData.stvarnaSteta}
                 onChange={(e) => handleChange('stvarnaSteta', parseInt(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="0"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800"
+                placeholder="Унесите штету ако је било (може бити 0)"
               />
               <p className="text-xs text-gray-900 mt-1">
                 Evidentirana šteta u protekle 3 godine (može biti 0)
@@ -163,7 +163,7 @@ export default function FinancialDataForm({ procenaId, initialData, onSave, onCl
               <h3 className="font-semibold text-blue-800 mb-2">📊 Pregled kalkulacije</h3>
               <div className="text-sm text-blue-700 space-y-1">
                 <div>
-                  <strong>SŠ procenat:</strong> {formData.poslovniPrihodi > 0 ? 
+                  <strong>SŠ procenat:</strong> {formData.poslovniPrihodi > 0 ?
                     ((formData.stvarnaSteta / formData.poslovniPrihodi) * 100).toFixed(2) : 0}% od poslovnih prihoda
                 </div>
                 <div>
@@ -180,7 +180,7 @@ export default function FinancialDataForm({ procenaId, initialData, onSave, onCl
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-800 rounded-md hover:bg-gray-50"
                 disabled={saving}
               >
                 Otkaži

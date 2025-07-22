@@ -18,10 +18,11 @@ export async function POST() {
             message: 'Database initialization completed successfully!',
             tables: [
                 'korisnici',
+                'PravnoLice',
                 'ProcenaRizika',
                 'RiskSelection',
                 'PrilogM',
-                'PravnaLica'
+                'FinancialData'
             ]
         });
 

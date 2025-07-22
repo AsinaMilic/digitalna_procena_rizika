@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDbConnection } from '../../../../../lib/db';
 
-interface FinancialData {
-  poslovniPrihodi: number;
-  vrednostImovine: number;
-  delatnost: string;
-  stvarnaSteta: number;
-}
-
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -15,51 +8,40 @@ export async function POST(
   try {
     const { id } = await params;
     const procenaId = parseInt(id);
-    const financialData: FinancialData = await request.json();
-
-    if (!procenaId) {
-      return NextResponse.json({ error: 'Nevaljan ID procene' }, { status: 400 });
-    }
+    const financialData = await request.json();
 
     const pool = await getDbConnection();
 
     // Proveri da li procena postoji
     const procenaCheck = await pool.query('SELECT id FROM ProcenaRizika WHERE id = $1', [procenaId]);
     if (procenaCheck.rows.length === 0) {
-      return NextResponse.json({ error: 'Procena ne postoji' }, { status: 404 });
+      return NextResponse.json({ error: "Procena ne postoji" }, { status: 404 });
     }
 
-    // Ažuriraj sve postojeće PrilogM zapise sa novim finansijskim podacima
+    // Upsert finansijskih podataka
     await pool.query(`
-      UPDATE PrilogM SET
-        poslovniPrihodi = $1,
-        vrednostImovine = $2,
-        delatnost = $3,
-        stvarnaSteta = $4,
+      INSERT INTO FinancialData (procenaId, poslovniPrihodi, vrednostImovine, delatnost, stvarnaSteta, createdAt, updatedAt)
+      VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ON CONFLICT (procenaId) 
+      DO UPDATE SET 
+        poslovniPrihodi = EXCLUDED.poslovniPrihodi,
+        vrednostImovine = EXCLUDED.vrednostImovine,
+        delatnost = EXCLUDED.delatnost,
+        stvarnaSteta = EXCLUDED.stvarnaSteta,
         updatedAt = CURRENT_TIMESTAMP
-      WHERE procenaId = $5
     `, [
+      procenaId,
       financialData.poslovniPrihodi,
       financialData.vrednostImovine,
       financialData.delatnost,
-      financialData.stvarnaSteta,
-      procenaId
+      financialData.stvarnaSteta
     ]);
 
-    console.log(`✅ Finansijski podaci ažurirani za procenu ${procenaId}`);
-
-    return NextResponse.json({
-      success: true,
-      message: 'Finansijski podaci uspešno sačuvani',
-      data: financialData
-    });
+    return NextResponse.json({ success: true });
 
   } catch (error) {
     console.error('Greška pri čuvanju finansijskih podataka:', error);
-    return NextResponse.json(
-      { error: 'Greška pri čuvanju podataka' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Greška pri čuvanju podataka' }, { status: 500 });
   }
 }
 
@@ -71,18 +53,12 @@ export async function GET(
     const { id } = await params;
     const procenaId = parseInt(id);
 
-    if (!procenaId) {
-      return NextResponse.json({ error: 'Nevaljan ID procene' }, { status: 400 });
-    }
-
     const pool = await getDbConnection();
-
-    // Uzmi finansijske podatke iz bilo kog PrilogM zapisa (svi imaju iste)
+    
     const result = await pool.query(`
-      SELECT DISTINCT poslovniPrihodi, vrednostImovine, delatnost, stvarnaSteta
-      FROM PrilogM 
+      SELECT poslovniPrihodi, vrednostImovine, delatnost, stvarnaSteta
+      FROM FinancialData 
       WHERE procenaId = $1
-      LIMIT 1
     `, [procenaId]);
 
     if (result.rows.length === 0) {
@@ -95,13 +71,17 @@ export async function GET(
       });
     }
 
-    return NextResponse.json(result.rows[0]);
+    // Mapiranje naziva kolona iz PostgreSQL (mala slova) u camelCase
+    const data = result.rows[0];
+    return NextResponse.json({
+      poslovniPrihodi: parseInt(data.poslovniprihodi || data.poslovniPrihodi || '1000000'),
+      vrednostImovine: parseInt(data.vrednostimovine || data.vrednostImovine || '5000000'),
+      delatnost: data.delatnost || 'default',
+      stvarnaSteta: parseInt(data.stvarnasteta || data.stvarnaSteta || '0')
+    });
 
   } catch (error) {
     console.error('Greška pri učitavanju finansijskih podataka:', error);
-    return NextResponse.json(
-      { error: 'Greška pri učitavanju podataka' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Greška pri učitavanju podataka' }, { status: 500 });
   }
 }

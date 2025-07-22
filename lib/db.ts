@@ -158,5 +158,25 @@ export async function createRiskAssessmentTables() {
       )
     `);
 
+  // Kreiranje tabele FinancialData
+  await pool.query(`
+      CREATE TABLE IF NOT EXISTS FinancialData (
+        id SERIAL PRIMARY KEY,
+        procenaId INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
+        poslovniPrihodi BIGINT NOT NULL DEFAULT 1000000,
+        vrednostImovine BIGINT NOT NULL DEFAULT 5000000,
+        delatnost VARCHAR(100) NOT NULL DEFAULT 'default',
+        stvarnaSteta BIGINT NOT NULL DEFAULT 0,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(procenaId)
+      )
+    `);
+
+  // Kreiranje indeksa za FinancialData
+  await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_financial_data_procena ON FinancialData(procenaId)
+    `);
+
   console.log('✅ Risk assessment tables created successfully');
 }

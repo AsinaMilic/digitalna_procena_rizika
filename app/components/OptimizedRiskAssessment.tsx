@@ -306,6 +306,28 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                                 💰 Finansijski podaci
                             </button>
                             <button
+                                onClick={() => {
+                                    // Test kalkulacija
+                                    import('../data/riskDataLoader').then(({ testCalculations, validateMatrices }) => {
+                                        console.log('🧪 POKRETANJE TESTOVA KALKULACIJA');
+                                        
+                                        // Test matrica
+                                        const matriceValidation = validateMatrices();
+                                        console.log('📊 Validacija matrica:', matriceValidation);
+                                        
+                                        // Test kalkulacija
+                                        const testResults = testCalculations();
+                                        console.log('🎯 Rezultati testova:', testResults);
+                                        
+                                        // Prikaži rezultate
+                                        alert(`Test rezultati:\n✅ Prošlo: ${testResults.passed}\n❌ Neuspešno: ${testResults.failed}\n\nDetalji u konzoli.`);
+                                    });
+                                }}
+                                className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
+                            >
+                                🧪 Test kalkulacija
+                            </button>
+                            <button
                                 onClick={exportData}
                                 className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
                             >

@@ -112,6 +112,16 @@ export default function Home() {
                                 Profil
                             </button>
 
+                            <button
+                                onClick={() => router.push('/test-kalkulacije')}
+                                className="inline-flex items-center px-3 py-2 text-sm font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors duration-200"
+                            >
+                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                </svg>
+                                🧪 Test
+                            </button>
+
                             {korisnik.je_admin && (
                                 <button
                                     onClick={() => router.push('/admin')}
