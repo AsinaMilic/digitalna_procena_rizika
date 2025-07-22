@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  // Removed standalone for Azure compatibility
   poweredByHeader: false,
   
   async headers() {
