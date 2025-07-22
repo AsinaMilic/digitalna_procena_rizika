@@ -61,7 +61,7 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
                     // Filtriraj podatke samo za trenutnu grupu
                     console.log('🔍 RiskAssessmentTable - učitani Prilog M podaci:', prilogMData.length);
                     console.log('🔍 RiskAssessmentTable - tražim grupu:', riskGroupData.id);
-                    
+
                     prilogMData
                         .filter((item: unknown) => {
                             // Type assertion for database item
@@ -134,7 +134,7 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
         if (procenaId && riskGroupData) {
             loadExistingData();
         }
-    }, [procenaId, riskGroupData.id]); // Remove callback dependencies to prevent infinite loop
+    }, [procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate]);
 
     const handleCellClick = async (riskId: string, dangerLevel: number, description: string) => {
         // Prevent multiple clicks on the same cell while loading
@@ -241,12 +241,12 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
 
             // Proveri rezultate
             let hasErrors = false;
-            
+
             if (selectionResults.status === 'rejected') {
                 console.error('Greška pri čuvanju selekcija:', selectionResults.reason);
                 hasErrors = true;
             }
-            
+
             if (prilogMResults.status === 'rejected') {
                 console.error('Greška pri čuvanju Prilog M podataka:', prilogMResults.reason);
                 hasErrors = true;
@@ -330,18 +330,17 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
                         {riskGroupData.description}
                     </p>
                 </div>
-                
+
                 {/* Dugme za čuvanje */}
                 {hasUnsavedChanges && (
                     <div className="ml-4">
                         <button
                             onClick={handleSaveChanges}
                             disabled={saving}
-                            className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                                saving 
+                            className={`px-6 py-3 rounded-lg font-medium transition-all ${saving
                                     ? 'bg-gray-400 text-white cursor-not-allowed'
                                     : 'bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl'
-                            }`}
+                                }`}
                         >
                             {saving ? (
                                 <div className="flex items-center gap-2">

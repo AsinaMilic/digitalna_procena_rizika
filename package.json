@@ -3,14 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
-    "start": "node server.js",
-    "start:custom": "node server.js",
+    "start": "next start",
     "lint": "next lint",
     "db:init": "tsx scripts/init-db.ts",
-    "db:seed": "curl -X POST http://localhost:3000/api/seed || echo 'Make sure the dev server is running with: npm run dev'",
-    "test:build": "npm run build && npm run start"
+    "db:seed": "curl -X POST http://localhost:3000/api/seed"
   },
   "dependencies": {
     "@types/html2canvas": "^0.5.35",

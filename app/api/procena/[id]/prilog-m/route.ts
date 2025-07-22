@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrilogMData } from '../../../../data/riskDataLoader';
 import { getDbConnection } from '../../../../../lib/db';
-import { handleOptions, createCorsResponse } from '../../../../../lib/cors';
 
 async function executeWithRetry<T>(operation: () => Promise<T>, maxRetries = 3): Promise<T> {
   let lastError: Error = new Error('Unknown error');
@@ -26,9 +25,8 @@ async function executeWithRetry<T>(operation: () => Promise<T>, maxRetries = 3):
   throw lastError;
 }
 
-// Handle OPTIONS preflight requests
 export async function OPTIONS() {
-  return handleOptions();
+  return new NextResponse(null, { status: 200 });
 }
 
 export async function POST(
@@ -42,9 +40,9 @@ export async function POST(
 
     // Validacija podataka
     if (!prilogMItem.id || !prilogMItem.groupId || prilogMItem.velicinaOpasnosti === null) {
-      return createCorsResponse(
+      return NextResponse.json(
         { error: 'Nedostaju obavezni podaci' },
-        400
+        { status: 400 }
       );
     }
 
@@ -130,7 +128,7 @@ export async function POST(
       prihvatljivost: prilogMItem.prihvatljivost
     });
 
-    return createCorsResponse({
+    return NextResponse.json({
       success: true,
       message: 'Prilog M podatak uspešno sačuvan',
       data: prilogMItem
@@ -141,12 +139,12 @@ export async function POST(
     const err = error as Error;
 
     if (err.message === "Procena ne postoji") {
-      return createCorsResponse({ error: "Procena ne postoji" }, 404);
+      return NextResponse.json({ error: "Procena ne postoji" }, { status: 404 });
     }
 
-    return createCorsResponse(
+    return NextResponse.json(
       { error: 'Greška pri čuvanju podataka' },
-      500
+      { status: 500 }
     );
   }
 }
@@ -160,7 +158,7 @@ export async function GET(
     const procenaId = parseInt(id);
 
     if (!procenaId) {
-      return createCorsResponse({ error: 'Nevaljan ID procene' }, 400);
+      return NextResponse.json({ error: 'Nevaljan ID procene' }, { status: 400 });
     }
 
     const data = await executeWithRetry(async () => {
@@ -180,13 +178,13 @@ export async function GET(
       return result.rows;
     });
 
-    return createCorsResponse(data);
+    return NextResponse.json(data);
 
   } catch (error) {
     console.error('Greška pri učitavanju Prilog M podataka:', error);
-    return createCorsResponse(
+    return NextResponse.json(
       { error: 'Greška pri učitavanju podataka' },
-      500
+      { status: 500 }
     );
   }
 }
@@ -201,7 +199,7 @@ export async function PUT(
     const procenaId = parseInt(id);
 
     if (!procenaId) {
-      return createCorsResponse({ error: 'Nevaljan ID procene' }, 400);
+      return NextResponse.json({ error: 'Nevaljan ID procene' }, { status: 400 });
     }
 
     const data = await executeWithRetry(async () => {
@@ -242,16 +240,16 @@ export async function PUT(
         : 0
     };
 
-    return createCorsResponse({
+    return NextResponse.json({
       data,
       statistics
     });
 
   } catch (error) {
     console.error('Greška pri računanju statistika:', error);
-    return createCorsResponse(
+    return NextResponse.json(
       { error: 'Greška pri računanju statistika' },
-      500
+      { status: 500 }
     );
   }
 }
