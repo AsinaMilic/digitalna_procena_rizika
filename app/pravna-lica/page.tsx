@@ -68,7 +68,7 @@ export default function PravnaLicaPage() {
         }
     };
 
-    const handleCreateRisk = async (pravnoLiceId: number, naziv: string) => {
+    const handleCreateRisk = async (pravnoLiceId: number) => {
         try {
             const token = localStorage.getItem('token');
             const response = await fetch('/api/procena', {
@@ -290,7 +290,7 @@ export default function PravnaLicaPage() {
                                                     } else if (pravnoLice.procene.length === 0) {
                                                         return (
                                                             <button
-                                                                onClick={() => handleCreateRisk(pravnoLice.id, pravnoLice.naziv)}
+                                                                onClick={() => handleCreateRisk(pravnoLice.id)}
                                                                 className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
                                                             >
                                                                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -303,7 +303,7 @@ export default function PravnaLicaPage() {
                                                         return (
                                                             <div className="flex flex-col items-end space-y-2">
                                                                 <button
-                                                                    onClick={() => handleCreateRisk(pravnoLice.id, pravnoLice.naziv)}
+                                                                    onClick={() => handleCreateRisk(pravnoLice.id)}
                                                                     className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200"
                                                                 >
                                                                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

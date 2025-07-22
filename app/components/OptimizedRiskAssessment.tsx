@@ -54,22 +54,43 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                 });
 
                 // Dodeli podatke odgovarajućim grupama
-                allData.forEach((item: any) => {
+                allData.forEach((item: unknown) => {
+                    // Type assertion for database item
+                    const dbItem = item as {
+                        id: string;
+                        groupid?: string;
+                        groupId?: string;
+                        requirement: string;
+                        velicinaopasnosti?: number;
+                        velicinaOpasnosti?: number;
+                        izlozenost: number;
+                        ranjivost: number;
+                        verovatnoca: number;
+                        posledice: number;
+                        steta: number;
+                        kriticnost: number;
+                        nivorizika?: number;
+                        nivoRizika?: number;
+                        kategorijarizika?: number;
+                        kategorijaRizika?: number;
+                        prihvatljivost: 'PRIHVATLJIV' | 'NEPRIHVATLJIV' | null;
+                    };
+
                     // Mapiranje polja iz baze na očekivani format
                     const mappedItem: PrilogMData = {
-                        id: item.id,
-                        groupId: item.groupid || item.groupId, // Podrška za oba formata
-                        requirement: item.requirement,
-                        velicinaOpasnosti: item.velicinaopasnosti || item.velicinaOpasnosti,
-                        izlozenost: item.izlozenost,
-                        ranjivost: item.ranjivost,
-                        verovatnoca: item.verovatnoca,
-                        posledice: item.posledice,
-                        steta: item.steta,
-                        kriticnost: item.kriticnost,
-                        nivoRizika: item.nivorizika || item.nivoRizika,
-                        kategorijaRizika: item.kategorijarizika || item.kategorijaRizika,
-                        prihvatljivost: item.prihvatljivost
+                        id: dbItem.id,
+                        groupId: dbItem.groupid || dbItem.groupId || '', // Podrška za oba formata
+                        requirement: dbItem.requirement,
+                        velicinaOpasnosti: dbItem.velicinaopasnosti || dbItem.velicinaOpasnosti || null,
+                        izlozenost: dbItem.izlozenost || null,
+                        ranjivost: dbItem.ranjivost || null,
+                        verovatnoca: dbItem.verovatnoca || null,
+                        posledice: dbItem.posledice || null,
+                        steta: dbItem.steta || null,
+                        kriticnost: dbItem.kriticnost || null,
+                        nivoRizika: dbItem.nivorizika || dbItem.nivoRizika || null,
+                        kategorijaRizika: dbItem.kategorijarizika || dbItem.kategorijaRizika || null,
+                        prihvatljivost: dbItem.prihvatljivost
                     };
 
                     if (mappedItem.groupId && newPrilogMData.has(mappedItem.groupId)) {
@@ -113,7 +134,7 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
     // Učitaj postojeće podatke pri inicijalizaciji
     useEffect(() => {
         loadAllData();
-    }, [procenaId]); // Depend directly on procenaId instead of loadAllData
+    }, [loadAllData]);
 
     const calculateStatistics = (prilogMData: Map<string, PrilogMData[]>) => {
         let totalItems = 0;

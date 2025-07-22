@@ -63,28 +63,53 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
                     console.log('🔍 RiskAssessmentTable - tražim grupu:', riskGroupData.id);
                     
                     prilogMData
-                        .filter((item: any) => {
-                            // Mapiranje polja iz baze na očekivani format
-                            const groupId = item.groupid || item.groupId;
+                        .filter((item: unknown) => {
+                            // Type assertion for database item
+                            const dbItem = item as {
+                                groupid?: string;
+                                groupId?: string;
+                            };
+                            const groupId = dbItem.groupid || dbItem.groupId;
                             console.log('🔍 Item groupId:', groupId, 'vs expected:', riskGroupData.id);
                             return groupId === riskGroupData.id;
                         })
-                        .forEach((item: any) => {
+                        .forEach((item: unknown) => {
+                            // Type assertion for database item
+                            const dbItem = item as {
+                                id: string;
+                                groupid?: string;
+                                groupId?: string;
+                                requirement: string;
+                                velicinaopasnosti?: number;
+                                velicinaOpasnosti?: number;
+                                izlozenost: number;
+                                ranjivost: number;
+                                verovatnoca: number;
+                                posledice: number;
+                                steta: number;
+                                kriticnost: number;
+                                nivorizika?: number;
+                                nivoRizika?: number;
+                                kategorijarizika?: number;
+                                kategorijaRizika?: number;
+                                prihvatljivost: 'PRIHVATLJIV' | 'NEPRIHVATLJIV' | null;
+                            };
+
                             // Mapiranje polja iz baze na očekivani format
                             const mappedItem: PrilogMData = {
-                                id: item.id,
-                                groupId: item.groupid || item.groupId,
-                                requirement: item.requirement,
-                                velicinaOpasnosti: item.velicinaopasnosti || item.velicinaOpasnosti,
-                                izlozenost: item.izlozenost,
-                                ranjivost: item.ranjivost,
-                                verovatnoca: item.verovatnoca,
-                                posledice: item.posledice,
-                                steta: item.steta,
-                                kriticnost: item.kriticnost,
-                                nivoRizika: item.nivorizika || item.nivoRizika,
-                                kategorijaRizika: item.kategorijarizika || item.kategorijaRizika,
-                                prihvatljivost: item.prihvatljivost
+                                id: dbItem.id,
+                                groupId: dbItem.groupid || dbItem.groupId || '',
+                                requirement: dbItem.requirement,
+                                velicinaOpasnosti: dbItem.velicinaopasnosti || dbItem.velicinaOpasnosti || null,
+                                izlozenost: dbItem.izlozenost || null,
+                                ranjivost: dbItem.ranjivost || null,
+                                verovatnoca: dbItem.verovatnoca || null,
+                                posledice: dbItem.posledice || null,
+                                steta: dbItem.steta || null,
+                                kriticnost: dbItem.kriticnost || null,
+                                nivoRizika: dbItem.nivorizika || dbItem.nivoRizika || null,
+                                kategorijaRizika: dbItem.kategorijarizika || dbItem.kategorijaRizika || null,
+                                prihvatljivost: dbItem.prihvatljivost
                             };
                             prilogMMap.set(mappedItem.id, mappedItem);
                         });
@@ -109,7 +134,7 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
         if (procenaId && riskGroupData) {
             loadExistingData();
         }
-    }, [procenaId, riskGroupData.id]); // Only depend on stable values
+    }, [procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate]); // Include all dependencies
 
     const handleCellClick = async (riskId: string, dangerLevel: number, description: string) => {
         // Prevent multiple clicks on the same cell while loading
