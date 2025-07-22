@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "node .next/standalone/server.js",
+    "build": "next build && node -e \"console.log('Standalone server exists:', require('fs').existsSync('.next/standalone/server.js'))\"",
+    "start": "node start.js",
     "lint": "next lint",
     "db:init": "tsx scripts/init-db.ts",
     "db:seed": "curl -X POST http://localhost:3000/api/seed"

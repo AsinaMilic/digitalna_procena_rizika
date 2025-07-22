@@ -35,9 +35,10 @@ node_modules/*/README*
 node_modules/*/CHANGELOG*
 node_modules/*/LICENSE*
 
-# Build artifacts that aren't needed
+# Build artifacts that aren't needed (but keep standalone folder)
 .next/cache/
 .next/static/chunks/webpack-*
+# Keep .next/standalone/ for production server
 
 # Source maps (optional - remove if you want them for debugging)
 .next/**/*.map
