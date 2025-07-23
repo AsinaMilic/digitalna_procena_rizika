@@ -7,6 +7,7 @@ import RiskAssessmentHeader from "./RiskAssessmentHeader";
 import RiskAssessmentStatusMessages from "./RiskAssessmentStatusMessages";
 import RiskAssessmentMainTable from "./RiskAssessmentMainTable";
 import PrilogMTable from "./PrilogMTable";
+import RiskParametersForm from "./RiskParametersForm";
 
 interface RiskSelection {
     risk_id: string;
@@ -19,11 +20,12 @@ interface RiskAssessmentTableProps {
     riskGroupData: RiskGroupData;
     onSelectionChange?: (selections: RiskSelection[]) => void;
     onPrilogMUpdate?: (prilogMData: PrilogMData[]) => void;
+    onUnsavedChanges?: (hasUnsaved: boolean) => void;
 }
 
 
 
-export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate }: RiskAssessmentTableProps) {
+export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate, onUnsavedChanges }: RiskAssessmentTableProps) {
     const [selections, setSelections] = useState<Map<string, RiskSelection>>(new Map());
     const [prilogMData, setPrilogMData] = useState<Map<string, PrilogMData>>(new Map());
     const [loading] = useState(false);
@@ -31,6 +33,12 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [saving, setSaving] = useState(false);
     const [selectedItemForDetails, setSelectedItemForDetails] = useState<PrilogMData | null>(null);
+    const [showParametersForm, setShowParametersForm] = useState(false);
+    const [pendingRiskData, setPendingRiskData] = useState<{
+        riskId: string;
+        dangerLevel: number;
+        description: string;
+    } | null>(null);
 
     // Učitaj postojeće selekcije i Prilog M podatke pri učitavanju komponente
     useEffect(() => {
@@ -142,6 +150,18 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
         }
     }, [procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate]);
 
+    // Obavesti roditeljsku komponentu o promenama u nesačuvanim promenama
+    useEffect(() => {
+        if (onUnsavedChanges) {
+            onUnsavedChanges(hasUnsavedChanges);
+        }
+    }, [hasUnsavedChanges, onUnsavedChanges]);
+
+    // Reset nesačuvanih promena kada se komponenta mount-uje (nova grupa)
+    useEffect(() => {
+        setHasUnsavedChanges(false);
+    }, [riskGroupData.id]);
+
     const handleCellClick = async (riskId: string, dangerLevel: number, description: string) => {
         // Prevent multiple clicks on the same cell while loading
         if (loading) {
@@ -154,6 +174,20 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
             console.log('Selection already exists with same danger level, skipping...');
             return;
         }
+
+        // Prikaži formu za unos parametara
+        setPendingRiskData({ riskId, dangerLevel, description });
+        setShowParametersForm(true);
+    };
+
+    const handleParametersSet = async (params: {
+        stepenIzlozenosti: number;
+        stepenRanjivosti: number;
+        kriticnost: number;
+    }) => {
+        if (!pendingRiskData) return;
+
+        const { riskId, dangerLevel, description } = pendingRiskData;
 
         const newSelection: RiskSelection = {
             risk_id: riskId,
@@ -187,13 +221,13 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
         // Automatski izračunaj Prilog M podatke PREMA STANDARDU SRPS A.L2.003:2025
         const calculatedData = calculatePrilogM(
             dangerLevel,                    // velicinaOpasnosti iz korisničkog klika
-            3,                             // stepenIzlozenosti (default - može se proširiti kroz UI)
-            3,                             // stepenRanjivosti (default - može se proširiti kroz UI)
+            params.stepenIzlozenosti,      // stepenIzlozenosti iz forme
+            params.stepenRanjivosti,       // stepenRanjivosti iz forme
             financialData.stvarnaSteta,    // stvarnaSteta iz finansijskih podataka
             financialData.poslovniPrihodi, // poslovniPrihodi iz finansijskih podataka
             financialData.vrednostImovine, // vrednostImovine iz finansijskih podataka
             financialData.delatnost,       // delatnost iz finansijskih podataka
-            3,                             // kriticnost (default - može se proširiti kroz UI)
+            params.kriticnost,             // kriticnost iz forme
             true                           // enableLogging - za debug
         );
 
@@ -231,6 +265,10 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
 
         // Označi da ima nesačuvanih promena
         setHasUnsavedChanges(true);
+
+        // Zatvori formu
+        setShowParametersForm(false);
+        setPendingRiskData(null);
     };
 
     // Batch čuvanje svih promena
@@ -386,6 +424,19 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
                 <PrilogMDetails
                     data={selectedItemForDetails}
                     onClose={() => setSelectedItemForDetails(null)}
+                />
+            )}
+
+            {/* Modal za unos parametara */}
+            {showParametersForm && pendingRiskData && (
+                <RiskParametersForm
+                    riskId={pendingRiskData.riskId}
+                    riskDescription={pendingRiskData.description}
+                    onParametersSet={handleParametersSet}
+                    onCancel={() => {
+                        setShowParametersForm(false);
+                        setPendingRiskData(null);
+                    }}
                 />
             )}
         </div>

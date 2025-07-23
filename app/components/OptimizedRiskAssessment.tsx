@@ -36,6 +36,7 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
     });
     const [loading, setLoading] = useState(false);
     const [showFinancialForm, setShowFinancialForm] = useState(false);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
     // Učitaj postojeće podatke pri inicijalizaciji - samo jednom
     useEffect(() => {
@@ -250,6 +251,24 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
         URL.revokeObjectURL(url);
     };
 
+    // Funkcija za potvrdu prelaska na drugi prilog
+    const handleGroupSwitch = (newGroupId: string) => {
+        if (hasUnsavedChanges) {
+            const confirmed = confirm(
+                'Имате несачуване промене за тренутни прилог.\n\n' +
+                'Да ли сте сигурни да желите да пређете на други прилог?\n' +
+                'Несачуване промене ће бити изгубљене.'
+            );
+
+            if (!confirmed) {
+                return; // Ne menjaj prilog ako korisnik nije potvrdio
+            }
+        }
+
+        setActiveGroupId(newGroupId);
+        setHasUnsavedChanges(false); // Reset unsaved changes flag
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -305,28 +324,7 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                             >
                                 💰 Finansijski podaci
                             </button>
-                            <button
-                                onClick={() => {
-                                    // Test kalkulacija
-                                    import('../data/riskDataLoader').then(({ testCalculations, validateMatrices }) => {
-                                        console.log('🧪 POKRETANJE TESTOVA KALKULACIJA');
-                                        
-                                        // Test matrica
-                                        const matriceValidation = validateMatrices();
-                                        console.log('📊 Validacija matrica:', matriceValidation);
-                                        
-                                        // Test kalkulacija
-                                        const testResults = testCalculations();
-                                        console.log('🎯 Rezultati testova:', testResults);
-                                        
-                                        // Prikaži rezultate
-                                        alert(`Test rezultati:\n✅ Prošlo: ${testResults.passed}\n❌ Neuspešno: ${testResults.failed}\n\nDetalji u konzoli.`);
-                                    });
-                                }}
-                                className="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
-                            >
-                                🧪 Test kalkulacija
-                            </button>
+
                             <button
                                 onClick={exportData}
                                 className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
@@ -335,6 +333,25 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                             </button>
                         </div>
                     </div>
+
+                    {/* Upozorenje o nesačuvanim promenama */}
+                    {hasUnsavedChanges && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center gap-3">
+                            <div className="flex-shrink-0">
+                                <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                </svg>
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm font-medium text-yellow-800">
+                                    ⚠️ Имате несачуване промене за тренутни прилог
+                                </p>
+                                <p className="text-xs text-yellow-700 mt-1">
+                                    Кликните &quot;Сачувај промене&quot; да сачувате ваше измене пре преласка на други прилог.
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Statistike */}
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -424,7 +441,7 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                             return (
                                 <button
                                     key={group.id}
-                                    onClick={() => setActiveGroupId(group.id)}
+                                    onClick={() => handleGroupSwitch(group.id)}
                                     className={`p-4 rounded-lg border-2 text-left transition-all ${isActive
                                         ? 'border-blue-500 bg-blue-50'
                                         : isCompleted
@@ -482,6 +499,7 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                         riskGroupData={activeGroupData}
                         onSelectionChange={activeGroupSelectionCallback}
                         onPrilogMUpdate={activeGroupPrilogMCallback}
+                        onUnsavedChanges={setHasUnsavedChanges}
                     />
                 )}
 
@@ -511,7 +529,32 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                                 </button>
 
                                 <button
-                                    onClick={() => window.location.href = '/'}
+                                    onClick={async () => {
+                                        try {
+                                            // Ažuriraj status procene na 'zavrsena'
+                                            const response = await fetch(`/api/procena/${procenaId}/status`, {
+                                                method: 'PUT',
+                                                headers: {
+                                                    'Content-Type': 'application/json',
+                                                },
+                                                body: JSON.stringify({ status: 'zavrsena' })
+                                            });
+
+                                            if (response.ok) {
+                                                console.log('✅ Status procene ažuriran na "zavrsena"');
+                                                window.location.href = '/';
+                                            } else {
+                                                console.error('❌ Greška pri ažuriranju statusa procene');
+                                                // I dalje preusmeri korisnika, ali prikaži upozorenje
+                                                alert('Procena je završena, ali status možda nije ažuriran. Kontaktirajte administratora.');
+                                                window.location.href = '/';
+                                            }
+                                        } catch (error) {
+                                            console.error('❌ Greška pri komunikaciji sa serverom:', error);
+                                            alert('Procena je završena, ali status možda nije ažuriran. Kontaktirajte administratora.');
+                                            window.location.href = '/';
+                                        }
+                                    }}
                                     className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
                                 >
                                     ✅ Gotovo - Povratak na početnu

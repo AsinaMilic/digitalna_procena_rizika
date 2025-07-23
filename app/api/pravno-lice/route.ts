@@ -112,3 +112,37 @@ export async function GET() {
         return NextResponse.json({error: "Greška pri dohvatanju podataka"}, {status: 500});
     }
 }
+
+export async function DELETE(req: Request) {
+    try {
+        const url = new URL(req.url);
+        const id = url.searchParams.get('id');
+        
+        if (!id) {
+            return NextResponse.json({error: "ID pravnog lica je obavezan"}, {status: 400});
+        }
+
+        const pool = await getDbConnection();
+
+        // Prvo obriši sve povezane procene rizika i njihove podatke
+        // Koristi CASCADE DELETE koji je definisan u tabeli
+        await pool.query('DELETE FROM FinancialData WHERE procenaId IN (SELECT id FROM ProcenaRizika WHERE pravnoLiceId = $1)', [id]);
+        await pool.query('DELETE FROM PrilogM WHERE procenaId IN (SELECT id FROM ProcenaRizika WHERE pravnoLiceId = $1)', [id]);
+        await pool.query('DELETE FROM RiskSelection WHERE procenaId IN (SELECT id FROM ProcenaRizika WHERE pravnoLiceId = $1)', [id]);
+        
+        // Obriši procene rizika
+        await pool.query('DELETE FROM ProcenaRizika WHERE pravnoLiceId = $1', [id]);
+        
+        // Zatim obriši pravno lice
+        const result = await pool.query('DELETE FROM PravnoLice WHERE id = $1', [id]);
+
+        if (result.rowCount === 0) {
+            return NextResponse.json({error: "Pravno lice nije pronađeno"}, {status: 404});
+        }
+
+        return NextResponse.json({success: true, message: "Pravno lice je uspešno obrisano"});
+    } catch (error) {
+        console.error("Greška pri brisanju pravnog lica:", error);
+        return NextResponse.json({error: "Greška pri brisanju pravnog lica"}, {status: 500});
+    }
+}
