@@ -26,6 +26,7 @@ export interface PrilogMData {
   nivoRizika: number | null; // Kolona 10 - V × P (iz matrice)
   kategorijaRizika: number | null; // Kolona 11 - prema tabeli P.1
   prihvatljivost: 'PRIHVATLJIV' | 'NEPRIHVATLJIV' | null; // Kolona 12 - prema tabeli P.2
+  usingDefaultFinancialData?: boolean; // Indikator da li se koriste default finansijski podaci
 }
 
 // Matrice za računanje (iz priloga N, Nj, O, P) - PREMA STANDARDU SRPS A.L2.003:2025

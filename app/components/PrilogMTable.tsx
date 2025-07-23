@@ -184,10 +184,17 @@ export default function PrilogMTable({ prilogMData, onShowDetails }: PrilogMTabl
                                         </span>
                                     </td>
                                     <td className="border border-gray-800 px-1 py-2 text-center">
-                                        <span className={`inline-block px-2 py-1 rounded text-white font-bold text-xs ${item.prihvatljivost === 'NEPRIHVATLJIV' ? 'bg-red-600' : 'bg-green-600'
-                                            }`}>
-                                            {item.prihvatljivost === 'NEPRIHVATLJIV' ? 'NE' : 'DA'}
-                                        </span>
+                                        <div className="flex flex-col items-center">
+                                            <span className={`inline-block px-2 py-1 rounded text-white font-bold text-xs ${item.prihvatljivost === 'NEPRIHVATLJIV' ? 'bg-red-600' : 'bg-green-600'
+                                                }`}>
+                                                {item.prihvatljivost === 'NEPRIHVATLJIV' ? 'NE' : 'DA'}
+                                            </span>
+                                            {item.usingDefaultFinancialData && (
+                                                <span className="text-orange-600 text-xs mt-1" title="Koriste se default finansijski podaci - rezultat može biti netačan">
+                                                    ⚠️
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="border border-gray-800 px-1 py-2 text-center">
                                         <button

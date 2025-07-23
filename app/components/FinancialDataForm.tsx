@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UTICAJ_DELATNOSTI } from '../data/riskDataLoader';
 
 interface FinancialData {
@@ -18,17 +18,48 @@ interface FinancialDataFormProps {
 }
 
 export default function FinancialDataForm({ procenaId, initialData, onSave, onClose }: FinancialDataFormProps) {
+  console.log('🔍 FinancialDataForm - component rendered with initialData:', initialData);
+  
   const [formData, setFormData] = useState<FinancialData>({
-    poslovniPrihodi: initialData?.poslovniPrihodi || 1000000,
-    vrednostImovine: initialData?.vrednostImovine || 5000000,
+    poslovniPrihodi: initialData?.poslovniPrihodi ?? 0, // Koristi ?? umesto || da pravilno rukuje sa 0
+    vrednostImovine: initialData?.vrednostImovine ?? 0, // Koristi ?? umesto || da pravilno rukuje sa 0
     delatnost: initialData?.delatnost || 'default',
-    stvarnaSteta: initialData?.stvarnaSteta || 0
+    stvarnaSteta: initialData?.stvarnaSteta ?? 0
   });
+  
+  console.log('🔍 FinancialDataForm - initial formData:', formData);
 
   const [saving, setSaving] = useState(false);
 
+  // Ažuriraj formu kada se initialData promeni
+  useEffect(() => {
+    console.log('🔍 FinancialDataForm - initialData changed:', initialData);
+    if (initialData) {
+      const newFormData = {
+        poslovniPrihodi: initialData.poslovniPrihodi ?? 0,
+        vrednostImovine: initialData.vrednostImovine ?? 0,
+        delatnost: initialData.delatnost || 'default',
+        stvarnaSteta: initialData.stvarnaSteta ?? 0
+      };
+      console.log('🔍 FinancialDataForm - setting form data:', newFormData);
+      setFormData(newFormData);
+    }
+  }, [initialData]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validacija obaveznih polja
+    if (!formData.poslovniPrihodi || formData.poslovniPrihodi <= 0) {
+      alert('Пословни приходи су обавезни и морају бити већи од 0');
+      return;
+    }
+
+    if (!formData.vrednostImovine || formData.vrednostImovine <= 0) {
+      alert('Вредност имовине је обавезна и мора бити већа од 0');
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -72,7 +103,7 @@ export default function FinancialDataForm({ procenaId, initialData, onSave, onCl
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-800">
-              💰 Finansijski podaci za procenu
+              💰 Finansijski подаци за процену
             </h2>
             <button
               onClick={onClose}
@@ -82,40 +113,74 @@ export default function FinancialDataForm({ procenaId, initialData, onSave, onCl
             </button>
           </div>
 
+          {/* Upozorenje o važnosti finansijskih podataka */}
+          <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-blue-800">
+                  Важно: Финансијски подаци су обавезни за тачну процену ризика
+                </h3>
+                <div className="mt-2 text-sm text-blue-700">
+                  <p>
+                    Према стандарду SRPS A.L2.003:2025, финансијски подаци се користе за:
+                  </p>
+                  <ul className="list-disc list-inside mt-1">
+                    <li>Калкулацију стварне штете (СШ) на основу пословних прихода</li>
+                    <li>Калкулацију вероватно максималне штете (ВМШ) на основу вредности имовине</li>
+                    <li>Одређивање прихватљивости ризика</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Poslovni prihodi */}
             <div>
               <label className="block text-sm font-medium text-gray-800 mb-2">
-                Poslovni prihodi (AOP 1001) - RSD
+                Poslovni prihodi (AOP 1001) - RSD <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
-                value={formData.poslovniPrihodi}
+                value={formData.poslovniPrihodi || ''}
                 onChange={(e) => handleChange('poslovniPrihodi', parseInt(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800"
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 ${!formData.poslovniPrihodi || formData.poslovniPrihodi <= 0
+                  ? 'border-red-500 bg-red-50'
+                  : 'border-gray-600'
+                  }`}
                 placeholder="Унесите пословне приходе (нпр. 1.000.000)"
                 required
+                min="1"
               />
               <p className="text-xs text-gray-900 mt-1">
-                Iz poslednjeg objavljenog bilansa uspеha (AOP 1001)
+                <strong>Обавезно поље.</strong> Из последњег објављеног биланса успеха (AOP 1001)
               </p>
             </div>
 
             {/* Vrednost imovine */}
             <div>
               <label className="block text-sm font-medium text-gray-800 mb-2">
-                Vrednost imovine (SVnpoz) - RSD
+                Vrednost imovine (SVnpoz) - RSD <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
-                value={formData.vrednostImovine}
+                value={formData.vrednostImovine || ''}
                 onChange={(e) => handleChange('vrednostImovine', parseInt(e.target.value) || 0)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800"
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 ${!formData.vrednostImovine || formData.vrednostImovine <= 0
+                  ? 'border-red-500 bg-red-50'
+                  : 'border-gray-600'
+                  }`}
                 placeholder="Унесите вредност имовине (нпр. 5.000.000)"
                 required
+                min="1"
               />
               <p className="text-xs text-gray-900 mt-1">
-                Sadašnja vrednost nekretina, postrojenja, opreme i zaliha
+                <strong>Обавезно поље.</strong> Садашња вредност некретина, постројења, опреме и залиха (SVnpoz)
               </p>
             </div>
 

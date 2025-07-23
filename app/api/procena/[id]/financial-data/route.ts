@@ -62,22 +62,22 @@ export async function GET(
     `, [procenaId]);
 
     if (result.rows.length === 0) {
-      // Vrati default vrednosti ako nema podataka
+      // Vrati prazne vrednosti ako nema podataka
       return NextResponse.json({
-        poslovniPrihodi: 1000000,
-        vrednostImovine: 5000000,
+        poslovniPrihodi: 0,
+        vrednostImovine: 0,
         delatnost: 'default',
         stvarnaSteta: 0
       });
     }
 
-    // Mapiranje naziva kolona iz PostgreSQL (mala slova) u camelCase
+    // PostgreSQL vraća nazive kolona u malim slovima
     const data = result.rows[0];
     return NextResponse.json({
-      poslovniPrihodi: parseInt(data.poslovniprihodi || data.poslovniPrihodi || '1000000'),
-      vrednostImovine: parseInt(data.vrednostimovine || data.vrednostImovine || '5000000'),
+      poslovniPrihodi: parseInt(data.poslovniprihodi || '0'),
+      vrednostImovine: parseInt(data.vrednostimovine || '0'),
       delatnost: data.delatnost || 'default',
-      stvarnaSteta: parseInt(data.stvarnasteta || data.stvarnaSteta || '0')
+      stvarnaSteta: parseInt(data.stvarnasteta || '0')
     });
 
   } catch (error) {
