@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { RiskGroupData } from "../data/riskGroups";
 import { PrilogMData, calculatePrilogM } from "../data/riskDataLoader";
 import PrilogMDetails from "./PrilogMDetails";
@@ -15,6 +15,13 @@ interface RiskSelection {
     risk_id: string;
     danger_level: number;
     description: string;
+}
+
+interface FinancialData {
+    poslovniPrihodi: number;
+    vrednostImovine: number;
+    delatnost: string;
+    stvarnaSteta: number;
 }
 
 interface RiskAssessmentTableProps {
@@ -43,22 +50,33 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
     } | null>(null);
     const [showFinancialForm, setShowFinancialForm] = useState(false);
     const [hasValidFinancialData, setHasValidFinancialData] = useState(false);
-    const [currentFinancialData, setCurrentFinancialData] = useState<any>(null);
+    const [currentFinancialData, setCurrentFinancialData] = useState<FinancialData | null>(null);
+
+    // Funkcija za učitavanje finansijskih podataka
+    const loadFinancialData = useCallback(async () => {
+        try {
+            const finResponse = await fetch(`/api/procena/${procenaId}/financial-data`);
+            if (finResponse.ok) {
+                const finData = await finResponse.json();
+                console.log('🔍 RiskAssessmentTable - loaded financial data:', finData);
+                const hasValid = finData.poslovniPrihodi > 0 && finData.vrednostImovine > 0;
+                setHasValidFinancialData(hasValid);
+                setCurrentFinancialData(finData);
+                console.log('🔍 RiskAssessmentTable - set currentFinancialData:', finData);
+                return hasValid;
+            }
+        } catch (error) {
+            console.error('Error loading financial data:', error);
+        }
+        return false;
+    }, [procenaId]);
 
     // Učitaj postojeće selekcije i Prilog M podatke pri učitavanju komponente
     useEffect(() => {
         async function loadExistingData() {
             try {
                 // Proverava finansijske podatke
-                const finResponse = await fetch(`/api/procena/${procenaId}/financial-data`);
-                if (finResponse.ok) {
-                    const finData = await finResponse.json();
-                    console.log('🔍 RiskAssessmentTable - loaded financial data:', finData);
-                    const hasValid = finData.poslovniPrihodi > 0 && finData.vrednostImovine > 0;
-                    setHasValidFinancialData(hasValid);
-                    setCurrentFinancialData(finData);
-                    console.log('🔍 RiskAssessmentTable - set currentFinancialData:', finData);
-                }
+                await loadFinancialData();
 
                 // Učitaj selekcije
                 const selectionsResponse = await fetch(`/api/procena/${procenaId}/risk-selection`);
@@ -164,7 +182,25 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
         if (procenaId && riskGroupData) {
             loadExistingData();
         }
-    }, [procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate]);
+    }, [procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate, loadFinancialData]);
+
+    // Slušaj za event kada se finansijski podaci sačuvaju
+    useEffect(() => {
+        const handleFinancialDataSaved = async (event: Event) => {
+            const customEvent = event as CustomEvent;
+            console.log('🔍 RiskAssessmentTable - received financial data saved event:', customEvent.detail);
+            if (customEvent.detail.procenaId === procenaId) {
+                console.log('🔍 RiskAssessmentTable - refreshing financial data after save');
+                await loadFinancialData();
+            }
+        };
+
+        window.addEventListener('financialDataSaved', handleFinancialDataSaved);
+
+        return () => {
+            window.removeEventListener('financialDataSaved', handleFinancialDataSaved);
+        };
+    }, [procenaId, loadFinancialData]);
 
     // Obavesti roditeljsku komponentu o promenama u nesačuvanim promenama
     useEffect(() => {
@@ -457,74 +493,32 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
             />
 
             {/* Upozorenje o nedostajućim finansijskim podacima ili dugme za editovanje */}
-            {!hasValidFinancialData ? (
-                <FinancialDataWarning onOpenForm={async () => {
-                    // Ponovo učitaj finansijske podatke pre otvaranja forme
-                    try {
-                        const finResponse = await fetch(`/api/procena/${procenaId}/financial-data`);
-                        if (finResponse.ok) {
-                            const finData = await finResponse.json();
-                            console.log('🔍 Opening form with fresh data:', finData);
-                            setCurrentFinancialData(finData);
-                            // Sačekaj malo da se state ažurira
-                            setTimeout(() => {
+            {/* Upozorenje o nedostajućim finansijskim podacima */}
+            {(() => {
+                console.log('🔍 RiskAssessmentTable - hasValidFinancialData:', hasValidFinancialData);
+                return !hasValidFinancialData;
+            })() && (
+                    <FinancialDataWarning onOpenForm={async () => {
+                        // Ponovo učitaj finansijske podatke pre otvaranja forme
+                        try {
+                            const finResponse = await fetch(`/api/procena/${procenaId}/financial-data`);
+                            if (finResponse.ok) {
+                                const finData = await finResponse.json();
+                                console.log('🔍 Opening form with fresh data:', finData);
+                                setCurrentFinancialData(finData);
+                                // Sačekaj malo da se state ažurira
+                                setTimeout(() => {
+                                    setShowFinancialForm(true);
+                                }, 50);
+                            } else {
                                 setShowFinancialForm(true);
-                            }, 50);
-                        } else {
+                            }
+                        } catch (error) {
+                            console.error('Error loading financial data:', error);
                             setShowFinancialForm(true);
                         }
-                    } catch (error) {
-                        console.error('Error loading financial data:', error);
-                        setShowFinancialForm(true);
-                    }
-                }} />
-            ) : (
-                <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-6">
-                    <div className="flex justify-between items-center">
-                        <div className="flex">
-                            <div className="flex-shrink-0">
-                                <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                            </div>
-                            <div className="ml-3">
-                                <h3 className="text-sm font-medium text-green-800">
-                                    ✅ Финансијски подаци су унети
-                                </h3>
-                                <div className="mt-2 text-sm text-green-700">
-                                    <p>Пословни приходи: {currentFinancialData?.poslovniPrihodi?.toLocaleString()} РСД</p>
-                                    <p>Вредност имовине: {currentFinancialData?.vrednostImovine?.toLocaleString()} РСД</p>
-                                </div>
-                            </div>
-                        </div>
-                        <button
-                            onClick={async () => {
-                                // Ponovo učitaj finansijske podatke pre otvaranja forme
-                                try {
-                                    const finResponse = await fetch(`/api/procena/${procenaId}/financial-data`);
-                                    if (finResponse.ok) {
-                                        const finData = await finResponse.json();
-                                        console.log('🔍 Opening form for editing with data:', finData);
-                                        setCurrentFinancialData(finData);
-                                        // Sačekaj malo da se state ažurira
-                                        setTimeout(() => {
-                                            setShowFinancialForm(true);
-                                        }, 50);
-                                    } else {
-                                        setShowFinancialForm(true);
-                                    }
-                                } catch (error) {
-                                    console.error('Error loading financial data:', error);
-                                    setShowFinancialForm(true);
-                                }
-                            }}
-                            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-sm"
-                        >
-                            Измени податке
-                        </button>
-                    </div>
-                </div>
-            )}
+                    }} />
+                )}
 
             <RiskAssessmentMainTable
                 riskGroupData={riskGroupData}
@@ -598,9 +592,12 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
             {showFinancialForm && (
                 <FinancialDataForm
                     procenaId={procenaId}
-                    initialData={currentFinancialData}
+                    initialData={currentFinancialData || undefined}
                     onSave={(data) => {
-                        setHasValidFinancialData(data.poslovniPrihodi > 0 && data.vrednostImovine > 0);
+                        console.log('🔍 RiskAssessmentTable - onSave called with data:', data);
+                        const isValid = data.poslovniPrihodi > 0 && data.vrednostImovine > 0;
+                        console.log('🔍 RiskAssessmentTable - setting hasValidFinancialData to:', isValid);
+                        setHasValidFinancialData(isValid);
                         setCurrentFinancialData(data);
                         setShowFinancialForm(false);
                         // Ponovo učitaj podatke nakon čuvanja
@@ -609,8 +606,11 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
                                 const finResponse = await fetch(`/api/procena/${procenaId}/financial-data`);
                                 if (finResponse.ok) {
                                     const finData = await finResponse.json();
+                                    console.log('🔍 RiskAssessmentTable - reloaded data:', finData);
                                     setCurrentFinancialData(finData);
-                                    setHasValidFinancialData(finData.poslovniPrihodi > 0 && finData.vrednostImovine > 0);
+                                    const reloadedIsValid = finData.poslovniPrihodi > 0 && finData.vrednostImovine > 0;
+                                    console.log('🔍 RiskAssessmentTable - setting hasValidFinancialData to (reloaded):', reloadedIsValid);
+                                    setHasValidFinancialData(reloadedIsValid);
                                 }
                             } catch (error) {
                                 console.error('Error reloading financial data:', error);
