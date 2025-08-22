@@ -15,7 +15,7 @@ export function getCellClass(
     
     const baseClass = "border border-gray-800 p-3 text-xs align-top cursor-pointer transition-colors text-black";
 
-    if (!hasContent) {
+    if (!hasContent && level !== 0) { // N/A always has content (level 0)
         return `${baseClass} bg-gray-50`;
     }
 
@@ -26,6 +26,7 @@ export function getCellClass(
         case 3: hoverClass = "hover:bg-yellow-100"; break;
         case 2: hoverClass = "hover:bg-blue-100"; break;
         case 1: hoverClass = "hover:bg-green-100"; break;
+        case 0: hoverClass = "hover:bg-gray-200"; break; // N/A hover
     }
 
     let selectedClass = "";
@@ -36,6 +37,7 @@ export function getCellClass(
             case 3: selectedClass = "!bg-yellow-200 !border-yellow-500 !border-2"; break;
             case 2: selectedClass = "!bg-blue-200 !border-blue-500 !border-2"; break;
             case 1: selectedClass = "!bg-green-200 !border-green-500 !border-2"; break;
+            case 0: selectedClass = "!bg-gray-300 !border-gray-600 !border-2"; break; // N/A selected
         }
     }
 

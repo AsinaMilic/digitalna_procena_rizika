@@ -134,9 +134,33 @@ export default function RiskAssessmentContent({
                 getCellClass={getCellClass}
             />
 
-            {/* Summary with Prilog M data */}
-            {(selections.size > 0 || prilogMData.size > 0) && (
+            {/* Summary with selections and Prilog M data */}
+            {selections.size > 0 && (
                 <div className="mt-6 space-y-4">
+                    {/* N/A selections summary */}
+                    {(() => {
+                        const naSelections = Array.from(selections.values()).filter(s => s.danger_level === 0);
+                        if (naSelections.length > 0) {
+                            return (
+                                <div className="p-4 bg-gray-50 border border-gray-300 rounded-lg">
+                                    <h4 className="font-bold text-gray-800 mb-3">
+                                        Ризици означени као &quot;Није променљиво&quot; (N/A):
+                                    </h4>
+                                    <div className="grid gap-2">
+                                        {naSelections.map(selection => (
+                                            <div key={selection.risk_id} className="flex items-center space-x-2 text-sm">
+                                                <span className="font-medium text-gray-700">{selection.risk_id}:</span>
+                                                <span className="text-gray-600">{selection.description}</span>
+                                                <span className="px-2 py-1 bg-gray-200 text-gray-700 rounded text-xs">N/A</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        }
+                        return null;
+                    })()}
+
                     {/* Warning about default financial data */}
                     {Array.from(prilogMData.values()).some(item => item.usingDefaultFinancialData) && (
                         <div className="bg-orange-50 border-l-4 border-orange-400 p-4 mb-4">
@@ -168,10 +192,13 @@ export default function RiskAssessmentContent({
                         </div>
                     )}
 
-                    <PrilogMTable
-                        prilogMData={prilogMData}
-                        onShowDetails={setSelectedItemForDetails}
-                    />
+                    {/* Prilog M table for calculated risks */}
+                    {prilogMData.size > 0 && (
+                        <PrilogMTable
+                            prilogMData={prilogMData}
+                            onShowDetails={setSelectedItemForDetails}
+                        />
+                    )}
                 </div>
             )}
 

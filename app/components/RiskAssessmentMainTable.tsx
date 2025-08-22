@@ -27,6 +27,9 @@ export default function RiskAssessmentMainTable({
                         <th className="border border-gray-800 p-3 text-sm font-bold text-center bg-gray-300 text-black" colSpan={5}>
                             ВЕЛИЧИНА ОПАСНОСТИ
                         </th>
+                        <th className="border border-gray-800 p-3 text-sm font-bold text-center bg-gray-400 text-black">
+                            Н/А
+                        </th>
                     </tr>
                     <tr className="bg-gray-100">
                         <th className="border border-gray-800 p-2"></th>
@@ -45,6 +48,9 @@ export default function RiskAssessmentMainTable({
                         </th>
                         <th className="border border-gray-800 p-2 text-sm font-bold text-center w-40 text-black">
                             Минимална<br />1
+                        </th>
+                        <th className="border border-gray-800 p-2 text-sm font-bold text-center w-32 text-black">
+                            Није<br />променљиво
                         </th>
                     </tr>
                 </thead>
@@ -88,6 +94,17 @@ export default function RiskAssessmentMainTable({
                                         </td>
                                     );
                                 })}
+
+                                {/* N/A cell */}
+                                <td
+                                    key="na"
+                                    className={getCellClass(item.id, 0, true)} // Using 0 for N/A level
+                                    onClick={() => onCellClick(item.id, 0, "Није променљиво / Not Applicable")}
+                                >
+                                    <div className="text-center font-medium text-gray-700">
+                                        Н/А
+                                    </div>
+                                </td>
                             </tr>
                         ))
                     ))}

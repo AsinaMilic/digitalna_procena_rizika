@@ -57,6 +57,35 @@ export function useRiskAssessmentActions({
             return;
         }
 
+        // Handle N/A selection (level 0) directly without parameters form
+        if (dangerLevel === 0) {
+            const newSelection: RiskSelection = {
+                risk_id: riskId,
+                danger_level: dangerLevel,
+                description
+            };
+
+            const newSelections = new Map(selections);
+            newSelections.set(riskId, newSelection);
+            setSelections(newSelections);
+
+            // Remove from Prilog M data since it's not applicable
+            const newPrilogMData = new Map(prilogMData);
+            newPrilogMData.delete(riskId);
+            setPrilogMData(newPrilogMData);
+
+            if (onSelectionChange) {
+                onSelectionChange(Array.from(newSelections.values()));
+            }
+
+            if (onPrilogMUpdate) {
+                onPrilogMUpdate(Array.from(newPrilogMData.values()));
+            }
+
+            setHasUnsavedChanges(true);
+            return;
+        }
+
         setPendingRiskData({ riskId, dangerLevel, description });
         return { showParametersForm: true };
     };
