@@ -1,0 +1,216 @@
+"use client";
+import { useState } from "react";
+import { PrilogMData } from "../data/riskDataLoader";
+import PrilogMDetails from "./PrilogMDetails";
+import RiskAssessmentHeader from "./RiskAssessmentHeader";
+import RiskAssessmentStatusMessages from "./RiskAssessmentStatusMessages";
+import RiskAssessmentMainTable from "./RiskAssessmentMainTable";
+import PrilogMTable from "./PrilogMTable";
+import RiskParametersForm from "./RiskParametersForm";
+import FinancialDataWarning from "./FinancialDataWarning";
+import FinancialDataForm from "./FinancialDataForm";
+
+interface FinancialData {
+    poslovniPrihodi: number;
+    vrednostImovine: number;
+    delatnost: string;
+    stvarnaSteta: number;
+}
+
+interface RiskAssessmentContentProps {
+    procenaId: string;
+    riskGroupData: any;
+    selections: Map<string, any>;
+    prilogMData: Map<string, PrilogMData>;
+    hasUnsavedChanges: boolean;
+    saving: boolean;
+    loading: boolean;
+    hasValidFinancialData: boolean;
+    currentFinancialData: FinancialData | null;
+    setCurrentFinancialData: (data: FinancialData | null) => void;
+    setHasValidFinancialData: (valid: boolean) => void;
+    pendingRiskData: { riskId: string; dangerLevel: number; description: string } | null;
+    setPendingRiskData: (data: any) => void;
+    onCellClick: (riskId: string, dangerLevel: number, description: string) => Promise<{ showParametersForm: boolean } | undefined>;
+    onParametersSet: (params: any) => Promise<void>;
+    onSaveChanges: () => Promise<void>;
+    getCellClass: (riskId: string, level: number, hasContent: boolean) => string;
+}
+
+export default function RiskAssessmentContent({
+    procenaId,
+    riskGroupData,
+    selections,
+    prilogMData,
+    hasUnsavedChanges,
+    saving,
+    loading,
+    hasValidFinancialData,
+    currentFinancialData,
+    setCurrentFinancialData,
+    setHasValidFinancialData,
+    pendingRiskData,
+    setPendingRiskData,
+    onCellClick,
+    onParametersSet,
+    onSaveChanges,
+    getCellClass
+}: RiskAssessmentContentProps) {
+    const [selectedItemForDetails, setSelectedItemForDetails] = useState<PrilogMData | null>(null);
+    const [showParametersForm, setShowParametersForm] = useState(false);
+    const [showFinancialForm, setShowFinancialForm] = useState(false);
+
+    const handleCellClick = async (riskId: string, dangerLevel: number, description: string) => {
+        const result = await onCellClick(riskId, dangerLevel, description);
+        if (result?.showParametersForm) {
+            setShowParametersForm(true);
+        }
+    };
+
+    const handleParametersSet = async (params: any) => {
+        await onParametersSet(params);
+        setShowParametersForm(false);
+        setPendingRiskData(null);
+    };
+
+    return (
+        <div className="bg-white rounded-2xl p-8 shadow-xl border border-blue-100">
+            <RiskAssessmentHeader
+                groupName={riskGroupData.name}
+                groupDescription={riskGroupData.description}
+                hasUnsavedChanges={hasUnsavedChanges}
+                saving={saving}
+                onSaveChanges={onSaveChanges}
+            />
+
+            <RiskAssessmentStatusMessages
+                hasUnsavedChanges={hasUnsavedChanges}
+                saving={saving}
+                loading={loading}
+            />
+
+            {/* Financial data warning */}
+            {(() => {
+                console.log('🔍 RiskAssessmentContent - hasValidFinancialData:', hasValidFinancialData);
+                return !hasValidFinancialData;
+            })() && (
+                <FinancialDataWarning onOpenForm={async () => {
+                    try {
+                        const finResponse = await fetch(`/api/procena/${procenaId}/financial-data`);
+                        if (finResponse.ok) {
+                            const finData = await finResponse.json();
+                            console.log('🔍 Opening form with fresh data:', finData);
+                            setCurrentFinancialData(finData);
+                            setTimeout(() => {
+                                setShowFinancialForm(true);
+                            }, 50);
+                        } else {
+                            setShowFinancialForm(true);
+                        }
+                    } catch (error) {
+                        console.error('Error loading financial data:', error);
+                        setShowFinancialForm(true);
+                    }
+                }} />
+            )}
+
+            <RiskAssessmentMainTable
+                riskGroupData={riskGroupData}
+                onCellClick={handleCellClick}
+                getCellClass={getCellClass}
+            />
+
+            {/* Summary with Prilog M data */}
+            {(selections.size > 0 || prilogMData.size > 0) && (
+                <div className="mt-6 space-y-4">
+                    {/* Warning about default financial data */}
+                    {Array.from(prilogMData.values()).some(item => item.usingDefaultFinancialData) && (
+                        <div className="bg-orange-50 border-l-4 border-orange-400 p-4 mb-4">
+                            <div className="flex">
+                                <div className="flex-shrink-0">
+                                    <svg className="h-5 w-5 text-orange-400" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div className="ml-3">
+                                    <h3 className="text-sm font-medium text-orange-800">
+                                        Упозорење: Користе се default финансијски подаци
+                                    </h3>
+                                    <div className="mt-2 text-sm text-orange-700">
+                                        <p>
+                                            Резултати процене ризика могу бити нетачни јер се користе default вредности:
+                                        </p>
+                                        <ul className="list-disc list-inside mt-1">
+                                            <li>Пословни приходи: 1.000.000 РСД</li>
+                                            <li>Вредност имовине: 5.000.000 РСД</li>
+                                            <li>Делатност: default (Iud = 0.15)</li>
+                                        </ul>
+                                        <p className="mt-2">
+                                            <strong>Препорука:</strong> Унесите стварне финансијске податке за тачну процену ризика према стандарду SRPS A.L2.003:2025.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <PrilogMTable
+                        prilogMData={prilogMData}
+                        onShowDetails={setSelectedItemForDetails}
+                    />
+                </div>
+            )}
+
+            {/* Modals */}
+            {selectedItemForDetails && (
+                <PrilogMDetails
+                    data={selectedItemForDetails}
+                    onClose={() => setSelectedItemForDetails(null)}
+                />
+            )}
+
+            {showParametersForm && pendingRiskData && (
+                <RiskParametersForm
+                    riskId={pendingRiskData.riskId}
+                    riskDescription={pendingRiskData.description}
+                    onParametersSet={handleParametersSet}
+                    onCancel={() => {
+                        setShowParametersForm(false);
+                        setPendingRiskData(null);
+                    }}
+                />
+            )}
+
+            {showFinancialForm && (
+                <FinancialDataForm
+                    procenaId={procenaId}
+                    initialData={currentFinancialData || undefined}
+                    onSave={(data) => {
+                        console.log('🔍 RiskAssessmentContent - onSave called with data:', data);
+                        const isValid = data.poslovniPrihodi > 0 && data.vrednostImovine > 0;
+                        console.log('🔍 RiskAssessmentContent - setting hasValidFinancialData to:', isValid);
+                        setHasValidFinancialData(isValid);
+                        setCurrentFinancialData(data);
+                        setShowFinancialForm(false);
+                        setTimeout(async () => {
+                            try {
+                                const finResponse = await fetch(`/api/procena/${procenaId}/financial-data`);
+                                if (finResponse.ok) {
+                                    const finData = await finResponse.json();
+                                    console.log('🔍 RiskAssessmentContent - reloaded data:', finData);
+                                    setCurrentFinancialData(finData);
+                                    const reloadedIsValid = finData.poslovniPrihodi > 0 && finData.vrednostImovine > 0;
+                                    console.log('🔍 RiskAssessmentContent - setting hasValidFinancialData to (reloaded):', reloadedIsValid);
+                                    setHasValidFinancialData(reloadedIsValid);
+                                }
+                            } catch (error) {
+                                console.error('Error reloading financial data:', error);
+                            }
+                        }, 100);
+                    }}
+                    onClose={() => setShowFinancialForm(false)}
+                />
+            )}
+        </div>
+    );
+}
