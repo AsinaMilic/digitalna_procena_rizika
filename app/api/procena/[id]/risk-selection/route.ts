@@ -94,7 +94,14 @@ export async function GET(req: Request, {params}: {params: Promise<{id: string}>
             return await pool.query('SELECT * FROM RiskSelection WHERE procenaId = $1', [procenaId]);
         });
 
-        return NextResponse.json(result.rows);
+        // Map database field names to expected format
+        const mappedRows = result.rows.map(row => ({
+            riskId: row.riskid || row.riskId,
+            dangerLevel: row.dangerlevel || row.dangerLevel,
+            description: row.description || ''
+        }));
+
+        return NextResponse.json(mappedRows);
     } catch (error) {
         console.error("Greška pri dohvatanju selekcija rizika:", error);
         return NextResponse.json({error: "Greška pri dohvatanju podataka"}, {status: 500});

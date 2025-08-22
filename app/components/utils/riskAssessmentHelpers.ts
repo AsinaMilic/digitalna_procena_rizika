@@ -10,7 +10,9 @@ export function getCellClass(
     hasContent: boolean, 
     selections: Map<string, RiskSelection>
 ) {
-    const isSelected = selections.get(riskId)?.danger_level === level;
+    const selection = selections.get(riskId);
+    const isSelected = selection?.danger_level === level;
+    
     const baseClass = "border border-gray-800 p-3 text-xs align-top cursor-pointer transition-colors text-black";
 
     if (!hasContent) {
@@ -29,11 +31,11 @@ export function getCellClass(
     let selectedClass = "";
     if (isSelected) {
         switch (level) {
-            case 5: selectedClass = "bg-red-200 border-red-500"; break;
-            case 4: selectedClass = "bg-orange-200 border-orange-500"; break;
-            case 3: selectedClass = "bg-yellow-200 border-yellow-500"; break;
-            case 2: selectedClass = "bg-blue-200 border-blue-500"; break;
-            case 1: selectedClass = "bg-green-200 border-green-500"; break;
+            case 5: selectedClass = "!bg-red-200 !border-red-500 !border-2"; break;
+            case 4: selectedClass = "!bg-orange-200 !border-orange-500 !border-2"; break;
+            case 3: selectedClass = "!bg-yellow-200 !border-yellow-500 !border-2"; break;
+            case 2: selectedClass = "!bg-blue-200 !border-blue-500 !border-2"; break;
+            case 1: selectedClass = "!bg-green-200 !border-green-500 !border-2"; break;
         }
     }
 

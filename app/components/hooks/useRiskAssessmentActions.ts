@@ -8,12 +8,12 @@ interface RiskSelection {
     description: string;
 }
 
-interface FinancialData {
-    poslovniPrihodi: number;
-    vrednostImovine: number;
-    delatnost: string;
-    stvarnaSteta: number;
-}
+// interface FinancialData {
+//     poslovniPrihodi: number;
+//     vrednostImovine: number;
+//     delatnost: string;
+//     stvarnaSteta: number;
+// }
 
 interface UseRiskAssessmentActionsProps {
     procenaId: string;

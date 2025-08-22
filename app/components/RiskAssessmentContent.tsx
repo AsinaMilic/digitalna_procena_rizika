@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { PrilogMData } from "../data/riskDataLoader";
+import { RiskGroupData } from "../data/riskGroups";
 import PrilogMDetails from "./PrilogMDetails";
 import RiskAssessmentHeader from "./RiskAssessmentHeader";
 import RiskAssessmentStatusMessages from "./RiskAssessmentStatusMessages";
@@ -17,10 +18,22 @@ interface FinancialData {
     stvarnaSteta: number;
 }
 
+interface RiskSelection {
+    risk_id: string;
+    danger_level: number;
+    description: string;
+}
+
+interface RiskSelection {
+    risk_id: string;
+    danger_level: number;
+    description: string;
+}
+
 interface RiskAssessmentContentProps {
     procenaId: string;
-    riskGroupData: any;
-    selections: Map<string, any>;
+    riskGroupData: RiskGroupData;
+    selections: Map<string, RiskSelection>;
     prilogMData: Map<string, PrilogMData>;
     hasUnsavedChanges: boolean;
     saving: boolean;
@@ -30,9 +43,9 @@ interface RiskAssessmentContentProps {
     setCurrentFinancialData: (data: FinancialData | null) => void;
     setHasValidFinancialData: (valid: boolean) => void;
     pendingRiskData: { riskId: string; dangerLevel: number; description: string } | null;
-    setPendingRiskData: (data: any) => void;
+    setPendingRiskData: (data: { riskId: string; dangerLevel: number; description: string } | null) => void;
     onCellClick: (riskId: string, dangerLevel: number, description: string) => Promise<{ showParametersForm: boolean } | undefined>;
-    onParametersSet: (params: any) => Promise<void>;
+    onParametersSet: (params: { stepenIzlozenosti: number; stepenRanjivosti: number; kriticnost: number; }) => Promise<void>;
     onSaveChanges: () => Promise<void>;
     getCellClass: (riskId: string, level: number, hasContent: boolean) => string;
 }
@@ -67,7 +80,7 @@ export default function RiskAssessmentContent({
         }
     };
 
-    const handleParametersSet = async (params: any) => {
+    const handleParametersSet = async (params: { stepenIzlozenosti: number; stepenRanjivosti: number; kriticnost: number; }) => {
         await onParametersSet(params);
         setShowParametersForm(false);
         setPendingRiskData(null);
@@ -94,27 +107,28 @@ export default function RiskAssessmentContent({
                 console.log('🔍 RiskAssessmentContent - hasValidFinancialData:', hasValidFinancialData);
                 return !hasValidFinancialData;
             })() && (
-                <FinancialDataWarning onOpenForm={async () => {
-                    try {
-                        const finResponse = await fetch(`/api/procena/${procenaId}/financial-data`);
-                        if (finResponse.ok) {
-                            const finData = await finResponse.json();
-                            console.log('🔍 Opening form with fresh data:', finData);
-                            setCurrentFinancialData(finData);
-                            setTimeout(() => {
+                    <FinancialDataWarning onOpenForm={async () => {
+                        try {
+                            const finResponse = await fetch(`/api/procena/${procenaId}/financial-data`);
+                            if (finResponse.ok) {
+                                const finData = await finResponse.json();
+                                console.log('🔍 Opening form with fresh data:', finData);
+                                setCurrentFinancialData(finData);
+                                setTimeout(() => {
+                                    setShowFinancialForm(true);
+                                }, 50);
+                            } else {
                                 setShowFinancialForm(true);
-                            }, 50);
-                        } else {
+                            }
+                        } catch (error) {
+                            console.error('Error loading financial data:', error);
                             setShowFinancialForm(true);
                         }
-                    } catch (error) {
-                        console.error('Error loading financial data:', error);
-                        setShowFinancialForm(true);
-                    }
-                }} />
-            )}
+                    }} />
+                )}
 
             <RiskAssessmentMainTable
+                key={`table-${selections.size}`} // Force re-render when selections change
                 riskGroupData={riskGroupData}
                 onCellClick={handleCellClick}
                 getCellClass={getCellClass}

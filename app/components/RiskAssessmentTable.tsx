@@ -60,6 +60,8 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
         setHasUnsavedChanges
     });
 
+
+
     // Notify parent component about unsaved changes
     useEffect(() => {
         if (onUnsavedChanges) {
@@ -90,6 +92,7 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
 
     return (
         <RiskAssessmentContent
+            key={`${procenaId}-${riskGroupData.id}-${selections.size}`} // Force re-render when selections change
             procenaId={procenaId}
             riskGroupData={riskGroupData}
             selections={selections}

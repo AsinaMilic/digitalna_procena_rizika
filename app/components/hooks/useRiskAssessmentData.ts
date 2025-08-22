@@ -59,12 +59,19 @@ export function useRiskAssessmentData(
                     const selectionsData = await selectionsResponse.json();
                     const selectionsMap = new Map<string, RiskSelection>();
 
-                    selectionsData.forEach((item: { riskId: string; dangerLevel: number; description: string }) => {
-                        selectionsMap.set(item.riskId, {
-                            risk_id: item.riskId,
-                            danger_level: item.dangerLevel,
-                            description: item.description
-                        });
+                    selectionsData.forEach((item: { riskId?: string; riskid?: string; dangerLevel?: number; dangerlevel?: number; description?: string }) => {
+                        // Handle different field name cases from database
+                        const riskId = item.riskId || item.riskid;
+                        const dangerLevel = item.dangerLevel || item.dangerlevel;
+                        const description = item.description || '';
+
+                        if (riskId && dangerLevel) {
+                            selectionsMap.set(riskId, {
+                                risk_id: riskId,
+                                danger_level: dangerLevel,
+                                description: description
+                            });
+                        }
                     });
 
                     setSelections(selectionsMap);
