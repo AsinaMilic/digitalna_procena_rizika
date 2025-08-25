@@ -15,8 +15,18 @@ interface ProcenaRizika {
 interface PravnoLice {
     id: number;
     naziv: string;
+    skraceno_poslovno_ime?: string;
     pib: string;
-    adresa: string;
+    maticni_broj?: string;
+    adresa?: string; // Zadržavamo za kompatibilnost
+    adresa_sediste?: string;
+    adresa_ostala?: string;
+    sifra_delatnosti?: string;
+    lice_zastupanje?: string;
+    lice_komunikacija?: string;
+    tim_procena_rizika?: string;
+    telefon_faks?: string;
+    internet_adresa?: string;
     procene: ProcenaRizika[];
 }
 
@@ -332,22 +342,72 @@ export default function PravnaLicaPage() {
                                             <div className="flex-1">
                                                 <div className="flex items-start justify-between">
                                                     <div>
-                                                        <h3 className="text-xl font-bold text-gray-900 mb-1">{pravnoLice.naziv}</h3>
-                                                        <div className="flex items-center space-x-4 text-sm text-gray-600">
-                                                            <span className="flex items-center">
-                                                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                                </svg>
-                                                                PIB: {pravnoLice.pib}
-                                                            </span>
-                                                            {pravnoLice.adresa && (
-                                                                <span className="flex items-center">
+                                                        <h3 className="text-xl font-bold text-gray-900 mb-1">Poslovno ime (pun naziv): {pravnoLice.naziv}</h3>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
+                                                            {pravnoLice.skraceno_poslovno_ime && (
+                                                                <div className="flex items-center">
+                                                                    <span className="font-medium">Skraceno poslovno ime:</span>
+                                                                    <span className="ml-2">{pravnoLice.skraceno_poslovno_ime}</span>
+                                                                </div>
+                                                            )}
+                                                            {pravnoLice.adresa_sediste && (
+                                                                <div className="flex items-center">
                                                                     <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                                                     </svg>
-                                                                    {pravnoLice.adresa}
-                                                                </span>
+                                                                    <span className="font-medium">Adresa sediste:</span>
+                                                                    <span className="ml-2">{pravnoLice.adresa_sediste}</span>
+                                                                </div>
+                                                            )}
+                                                            {pravnoLice.adresa_ostala && (
+                                                                <div className="flex items-center">
+                                                                    <span className="font-medium">Adresa desita i ogranaka, izdvojenih mesta i ostalih funkcionalnih celina posmatrane organizacije koji nisu na istoj adresi kao sediste:</span>
+                                                                    <span className="ml-2">{pravnoLice.adresa_ostala}</span>
+                                                                </div>
+                                                            )}
+                                                            {pravnoLice.sifra_delatnosti && (
+                                                                <div className="flex items-center">
+                                                                    <span className="font-medium">Sifra delatnosti:</span>
+                                                                    <span className="ml-2">{pravnoLice.sifra_delatnosti}</span>
+                                                                </div>
+                                                            )}
+                                                            {pravnoLice.maticni_broj && (
+                                                                <div className="flex items-center">
+                                                                    <span className="font-medium">maticni broj:</span>
+                                                                    <span className="ml-2">{pravnoLice.maticni_broj}</span>
+                                                                </div>
+                                                            )}
+                                                            <div className="flex items-center">
+                                                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                                </svg>
+                                                                <span className="font-medium">PIB:</span>
+                                                                <span className="ml-2">{pravnoLice.pib}</span>
+                                                            </div>
+                                                            {(pravnoLice.lice_zastupanje || pravnoLice.lice_komunikacija) && (
+                                                                <div className="flex items-center">
+                                                                    <span className="font-medium">Lice odgovorno za zastupanje i lice ovslasceno za komunikaciju u vezi procenom rizika:</span>
+                                                                    <span className="ml-2">{pravnoLice.lice_zastupanje || pravnoLice.lice_komunikacija}</span>
+                                                                </div>
+                                                            )}
+                                                            {pravnoLice.tim_procena_rizika && (
+                                                                <div className="flex items-center">
+                                                                    <span className="font-medium">Podaci o licima iz posmatrane organizacije koja ucestvuju u timu za procenu rizika ( ime, prezime, strucna sprema):</span>
+                                                                    <span className="ml-2">{pravnoLice.tim_procena_rizika}</span>
+                                                                </div>
+                                                            )}
+                                                            {pravnoLice.telefon_faks && (
+                                                                <div className="flex items-center">
+                                                                    <span className="font-medium">broj telefona / faksa:</span>
+                                                                    <span className="ml-2">{pravnoLice.telefon_faks}</span>
+                                                                </div>
+                                                            )}
+                                                            {pravnoLice.internet_adresa && (
+                                                                <div className="flex items-center">
+                                                                    <span className="font-medium">Internet adresa:</span>
+                                                                    <span className="ml-2">{pravnoLice.internet_adresa}</span>
+                                                                </div>
                                                             )}
                                                         </div>
                                                     </div>
@@ -528,7 +588,7 @@ export default function PravnaLicaPage() {
                                                                             <div className="flex-1">
                                                                                 <div className="text-xs text-gray-600 mb-1">Naziv usluge:</div>
                                                                                 <div className="text-sm font-medium text-gray-900">{procena.naziv_usluge}</div>
-                                                                                
+
                                                                                 {procena.datum_izrade && (
                                                                                     <div className="mt-2 grid grid-cols-2 gap-4 text-xs">
                                                                                         <div>

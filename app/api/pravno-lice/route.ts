@@ -3,7 +3,22 @@ import {getDbConnection} from "../../../lib/db";
 
 export async function POST(req: Request) {
     try {
-        const {naziv, pib, adresa} = await req.json();
+        const {
+            naziv, 
+            skraceno_poslovno_ime,
+            pib, 
+            maticni_broj,
+            adresa_sediste,
+            adresa_ostala,
+            sifra_delatnosti,
+            lice_zastupanje,
+            lice_komunikacija,
+            tim_procena_rizika,
+            telefon_faks,
+            internet_adresa,
+            // Zadržavamo staru adresu za kompatibilnost
+            adresa
+        } = await req.json();
         
         if (!naziv || !pib) {
             return NextResponse.json({error: "Naziv i PIB su obavezni"}, {status: 400});
@@ -20,12 +35,54 @@ export async function POST(req: Request) {
             }, {status: 400});
         }
 
+        // Check if legal entity with this matični broj already exists (if provided)
+        if (maticni_broj) {
+            const existingMaticni = await pool.query('SELECT id, naziv FROM PravnoLice WHERE maticni_broj = $1', [maticni_broj]);
+            if (existingMaticni.rows.length > 0) {
+                return NextResponse.json({
+                    error: `Pravno lice sa matičnim brojem ${maticni_broj} već postoji (${existingMaticni.rows[0].naziv})`
+                }, {status: 400});
+            }
+        }
+
         // Insert pravno lice
         const pravnoLiceResult = await pool.query(`
-                INSERT INTO PravnoLice (naziv, pib, adresa) 
-                VALUES ($1, $2, $3)
+                INSERT INTO PravnoLice (
+                    naziv, 
+                    skraceno_poslovno_ime,
+                    pib, 
+                    maticni_broj,
+                    adresa,
+                    adresa_sediste,
+                    adresa_ostala,
+                    sifra_delatnosti,
+                    lice_zastupanje,
+                    lice_komunikacija,
+                    tim_procena_rizika,
+                    telefon,
+                    telefon_faks,
+                    internet_adresa,
+                    email
+                ) 
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                 RETURNING id
-            `, [naziv, pib, adresa || null]);
+            `, [
+                naziv, 
+                skraceno_poslovno_ime || null,
+                pib, 
+                maticni_broj || null,
+                adresa || adresa_sediste || null, // Kompatibilnost sa starom adresom
+                adresa_sediste || null,
+                adresa_ostala || null,
+                sifra_delatnosti || null,
+                lice_zastupanje || null,
+                lice_komunikacija || null,
+                tim_procena_rizika || null,
+                telefon_faks || null, // Stara kolona telefon
+                telefon_faks || null,
+                internet_adresa || null,
+                null // email - zadržavamo null za sada
+            ]);
 
         const pravnoLiceId = pravnoLiceResult.rows[0].id;
 
@@ -71,8 +128,20 @@ export async function GET() {
             SELECT 
                 pl.id,
                 pl.naziv,
+                pl.skraceno_poslovno_ime,
                 pl.pib,
+                pl.maticni_broj,
                 pl.adresa,
+                pl.adresa_sediste,
+                pl.adresa_ostala,
+                pl.sifra_delatnosti,
+                pl.lice_zastupanje,
+                pl.lice_komunikacija,
+                pl.tim_procena_rizika,
+                pl.telefon,
+                pl.telefon_faks,
+                pl.internet_adresa,
+                pl.email,
                 pr.id as procenaId,
                 pr.createdAt as datum,
                 pr.status,
@@ -96,8 +165,20 @@ export async function GET() {
                 pravnaLicaMap.set(row.id, {
                     id: row.id,
                     naziv: row.naziv,
+                    skraceno_poslovno_ime: row.skraceno_poslovno_ime,
                     pib: row.pib,
+                    maticni_broj: row.maticni_broj,
                     adresa: row.adresa,
+                    adresa_sediste: row.adresa_sediste,
+                    adresa_ostala: row.adresa_ostala,
+                    sifra_delatnosti: row.sifra_delatnosti,
+                    lice_zastupanje: row.lice_zastupanje,
+                    lice_komunikacija: row.lice_komunikacija,
+                    tim_procena_rizika: row.tim_procena_rizika,
+                    telefon: row.telefon,
+                    telefon_faks: row.telefon_faks,
+                    internet_adresa: row.internet_adresa,
+                    email: row.email,
                     procene: []
                 });
             }
