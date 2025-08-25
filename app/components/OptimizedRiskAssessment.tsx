@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { RISK_GROUPS } from '../data/riskGroups';
 import { getRiskGroupData } from '../data/riskDataLoader';
 import { PrilogMData } from '../data/riskDataLoader';
@@ -233,14 +233,17 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
         });
     }, []);
 
-    // Create stable callbacks for the active group
+    // Create stable callbacks for the active group - use ref to avoid recreating
+    const activeGroupIdRef = useRef(activeGroupId);
+    activeGroupIdRef.current = activeGroupId;
+
     const activeGroupSelectionCallback = useCallback((selections: RiskSelection[]) => {
-        handleSelectionChange(activeGroupId, selections);
-    }, [activeGroupId, handleSelectionChange]);
+        handleSelectionChange(activeGroupIdRef.current, selections);
+    }, [handleSelectionChange]);
 
     const activeGroupPrilogMCallback = useCallback((prilogMData: PrilogMData[]) => {
-        handlePrilogMUpdate(activeGroupId, prilogMData);
-    }, [activeGroupId, handlePrilogMUpdate]);
+        handlePrilogMUpdate(activeGroupIdRef.current, prilogMData);
+    }, [handlePrilogMUpdate]);
 
     // Dobij podatke za aktivnu grupu
     const activeGroupData = getRiskGroupData(activeGroupId);
@@ -548,10 +551,8 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                 {/* Aktivna tabela */}
                 {activeGroupData && activeGroupInfo && (
                     <RiskAssessmentTable
-                        key={activeGroupId} // Add key to force remount when group changes
                         procenaId={procenaId}
                         riskGroupData={activeGroupData}
-                        allPrilogMData={allPrilogMData} // Proslijedi sve podatke
                         onSelectionChange={activeGroupSelectionCallback}
                         onPrilogMUpdate={activeGroupPrilogMCallback}
                         onUnsavedChanges={setHasUnsavedChanges}

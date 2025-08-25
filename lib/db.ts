@@ -35,7 +35,7 @@ export async function getDbConnection() {
       console.error('Database pool error:', err);
     });
   }
-  
+
   return pool;
 }
 
@@ -73,27 +73,64 @@ export async function createUsersTable() {
   }
 }
 
-// Kreiranje tabela za procenu rizika
-export async function createRiskAssessmentTables() {
+// Kreiranje kompletne šeme baze podataka - briše postojeće podatke!
+export async function initializeDatabase() {
   const pool = await getDbConnection();
 
-  // Kreiranje tabele PravnoLice prvo (jer je referisana od strane ProcenaRizika)
-  await pool.query(`
-      CREATE TABLE IF NOT EXISTS PravnoLice (
+  try {
+    console.log('🗑️ Dropping existing schema...');
+
+    // Obriši sve tabele i sekvence kompletno
+    await pool.query('DROP SCHEMA IF EXISTS public CASCADE');
+    await pool.query('CREATE SCHEMA public');
+    await pool.query('GRANT ALL ON SCHEMA public TO postgres');
+    await pool.query('GRANT ALL ON SCHEMA public TO public');
+
+    console.log('🏗️ Creating fresh database schema...');
+
+    // Kreiranje tabele korisnika
+    await pool.query(`
+      CREATE TABLE korisnici (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        lozinka VARCHAR(255) NOT NULL,
+        ime VARCHAR(100) NOT NULL,
+        prezime VARCHAR(100) NOT NULL,
+        status VARCHAR(20) DEFAULT 'na_cekanju' NOT NULL,
+        je_admin BOOLEAN DEFAULT FALSE,
+        datum_kreiranja TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        datum_odobrenja TIMESTAMP NULL,
+        odobrio_admin INTEGER NULL
+      )
+    `);
+
+    // Kreiranje tabele PravnoLice
+    await pool.query(`
+      CREATE TABLE PravnoLice (
         id SERIAL PRIMARY KEY,
         naziv VARCHAR(255) NOT NULL,
+        skraceno_poslovno_ime VARCHAR(255),
         pib VARCHAR(20) UNIQUE NOT NULL,
+        maticni_broj VARCHAR(20),
         adresa VARCHAR(500),
+        adresa_sediste VARCHAR(500),
+        adresa_ostala TEXT,
+        sifra_delatnosti VARCHAR(20),
+        lice_zastupanje TEXT,
+        lice_komunikacija TEXT,
+        tim_procena_rizika TEXT,
         telefon VARCHAR(50),
+        telefon_faks VARCHAR(100),
         email VARCHAR(255),
+        internet_adresa VARCHAR(255),
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-  // Kreiranje tabele ProcenaRizika
-  await pool.query(`
-      CREATE TABLE IF NOT EXISTS ProcenaRizika (
+    // Kreiranje tabele ProcenaRizika
+    await pool.query(`
+      CREATE TABLE ProcenaRizika (
         id SERIAL PRIMARY KEY,
         naziv VARCHAR(255) NOT NULL,
         opis TEXT,
@@ -109,9 +146,9 @@ export async function createRiskAssessmentTables() {
       )
     `);
 
-  // Kreiranje tabele RiskSelection
-  await pool.query(`
-      CREATE TABLE IF NOT EXISTS RiskSelection (
+    // Kreiranje tabele RiskSelection
+    await pool.query(`
+      CREATE TABLE RiskSelection (
         id SERIAL PRIMARY KEY,
         procenaId INTEGER NOT NULL,
         riskId VARCHAR(50) NOT NULL,
@@ -124,9 +161,9 @@ export async function createRiskAssessmentTables() {
       )
     `);
 
-  // Kreiranje tabele PrilogM
-  await pool.query(`
-      CREATE TABLE IF NOT EXISTS PrilogM (
+    // Kreiranje tabele PrilogM
+    await pool.query(`
+      CREATE TABLE PrilogM (
         id SERIAL PRIMARY KEY,
         procenaId INTEGER NOT NULL,
         itemId VARCHAR(50) NOT NULL,
@@ -142,17 +179,16 @@ export async function createRiskAssessmentTables() {
         nivoRizika INTEGER,
         kategorijaRizika INTEGER,
         prihvatljivost VARCHAR(50),
-        -- Dodatni podaci za kalkulacije prema standardu
         stepenIzlozenosti INTEGER DEFAULT 3,
         stepenRanjivosti INTEGER DEFAULT 3,
         stvarnaSteta DECIMAL(15,2) DEFAULT 0,
         poslovniPrihodi DECIMAL(15,2) DEFAULT 1000000,
         vrednostImovine DECIMAL(15,2) DEFAULT 5000000,
         delatnost VARCHAR(100) DEFAULT 'default',
-        -- Kalkulisane vrednosti
         stepenSS INTEGER,
         stepenVMSH INTEGER,
         vmshIznos DECIMAL(15,2),
+        opisIdentifikovanihRizika TEXT,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (procenaId) REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
@@ -160,9 +196,9 @@ export async function createRiskAssessmentTables() {
       )
     `);
 
-  // Kreiranje tabele FinancialData
-  await pool.query(`
-      CREATE TABLE IF NOT EXISTS FinancialData (
+    // Kreiranje tabele FinancialData
+    await pool.query(`
+      CREATE TABLE FinancialData (
         id SERIAL PRIMARY KEY,
         procenaId INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
         poslovniPrihodi BIGINT NOT NULL DEFAULT 1000000,
@@ -175,10 +211,64 @@ export async function createRiskAssessmentTables() {
       )
     `);
 
-  // Kreiranje indeksa za FinancialData
-  await pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_financial_data_procena ON FinancialData(procenaId)
+    // Kreiranje tabele PrilogLj - za sekcijske opise identifikovanih rizika
+    await pool.query(`
+      CREATE TABLE PrilogLj (
+        id SERIAL PRIMARY KEY,
+        procenaId INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
+        sectionId VARCHAR(50) NOT NULL,
+        groupId VARCHAR(50) NOT NULL,
+        sectionName VARCHAR(255),
+        itemCount INTEGER DEFAULT 0,
+        averageVO INTEGER,
+        opisIdentifikovanihRizika TEXT,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(procenaId, sectionId, groupId)
+      )
     `);
 
-  console.log('✅ Risk assessment tables created successfully');
+    // Kreiranje tabele PrilogS - karakteristike identifikovanih rizika
+    await pool.query(`
+      CREATE TABLE prilog_s (
+        id SERIAL PRIMARY KEY,
+        procena_id INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
+        item_id INTEGER NOT NULL,
+        vrednost TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(procena_id, item_id)
+      )
+    `);
+
+    // Kreiranje indeksa
+    await pool.query(`
+      CREATE INDEX idx_pravno_lice_maticni_broj ON PravnoLice(maticni_broj);
+      CREATE INDEX idx_pravno_lice_pib ON PravnoLice(pib);
+      CREATE INDEX idx_pravno_lice_sifra_delatnosti ON PravnoLice(sifra_delatnosti);
+      CREATE INDEX idx_financial_data_procena ON FinancialData(procenaId);
+    `);
+
+    // Kreiranje default admin korisnika
+    const bcrypt = await import('bcryptjs');
+    const adminPassword = await bcrypt.hash('admin123', 10);
+    await pool.query(`
+      INSERT INTO korisnici (email, lozinka, ime, prezime, status, je_admin)
+      VALUES ('admin@admin.com', $1, 'Admin', 'Administrator', 'odobren', TRUE)
+    `, [adminPassword]);
+
+    console.log('✅ Database schema initialized successfully');
+    console.log('👤 Default admin created: admin@admin.com / admin123');
+
+  } catch (error) {
+    console.error('❌ Error initializing database:', error);
+    throw error;
+  }
 }
+
+// Kreiranje tabela za procenu rizika (backward compatibility)
+export async function createRiskAssessmentTables() {
+  return initializeDatabase();
+}
+
+

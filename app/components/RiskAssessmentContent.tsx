@@ -7,6 +7,8 @@ import RiskAssessmentHeader from "./RiskAssessmentHeader";
 import RiskAssessmentStatusMessages from "./RiskAssessmentStatusMessages";
 import RiskAssessmentMainTable from "./RiskAssessmentMainTable";
 import PrilogMTable from "./PrilogMTable";
+import PrilogLjTable from "./PrilogLjTable";
+import PrilogSTable from "./PrilogSTable";
 import RiskParametersForm from "./RiskParametersForm";
 import FinancialDataWarning from "./FinancialDataWarning";
 import FinancialDataForm from "./FinancialDataForm";
@@ -48,7 +50,7 @@ interface RiskAssessmentContentProps {
     onParametersSet: (params: { stepenIzlozenosti: number; stepenRanjivosti: number; kriticnost: number; }) => Promise<void>;
     onSaveChanges: () => Promise<void>;
     getCellClass: (riskId: string, level: number, hasContent: boolean) => string;
-    onPrilogMUpdate?: (itemId: string, field: 'posledice' | 'steta', value: number) => void;
+    onPrilogMUpdate?: (itemId: string, field: 'posledice' | 'steta' | 'opisIdentifikovanihRizika', value: number | string) => void;
 }
 
 export default function RiskAssessmentContent({
@@ -105,29 +107,12 @@ export default function RiskAssessmentContent({
             />
 
             {/* Financial data warning */}
-            {(() => {
-                console.log('🔍 RiskAssessmentContent - hasValidFinancialData:', hasValidFinancialData);
-                return !hasValidFinancialData;
-            })() && (
-                    <FinancialDataWarning onOpenForm={async () => {
-                        try {
-                            const finResponse = await fetch(`/api/procena/${procenaId}/financial-data`);
-                            if (finResponse.ok) {
-                                const finData = await finResponse.json();
-                                console.log('🔍 Opening form with fresh data:', finData);
-                                setCurrentFinancialData(finData);
-                                setTimeout(() => {
-                                    setShowFinancialForm(true);
-                                }, 50);
-                            } else {
-                                setShowFinancialForm(true);
-                            }
-                        } catch (error) {
-                            console.error('Error loading financial data:', error);
-                            setShowFinancialForm(true);
-                        }
-                    }} />
-                )}
+            {!hasValidFinancialData && (
+                <FinancialDataWarning onOpenForm={() => {
+                    // Jednostavno otvori form bez dodatnih API poziva
+                    setShowFinancialForm(true);
+                }} />
+            )}
 
             <RiskAssessmentMainTable
                 key={`table-${selections.size}`} // Force re-render when selections change
@@ -146,7 +131,7 @@ export default function RiskAssessmentContent({
                             return (
                                 <div className="p-4 bg-gray-50 border border-gray-300 rounded-lg">
                                     <h4 className="font-bold text-gray-800 mb-3">
-                                        Ризици означени као &quot;Није променљиво&quot; (N/A):
+                                        Ризици означени као &quot;Није применљиво&quot; (N/A):
                                     </h4>
                                     <div className="grid gap-2">
                                         {naSelections.map(selection => (
@@ -216,7 +201,7 @@ export default function RiskAssessmentContent({
                                     }
 
                                     console.log(`✅ Updated ${field} for item ${itemId} to ${value}`);
-                                    
+
                                     // Pozovi callback za lokalno ažuriranje
                                     if (onPrilogMUpdate) {
                                         onPrilogMUpdate(itemId, field, value);
@@ -228,6 +213,44 @@ export default function RiskAssessmentContent({
                             }}
                         />
                     )}
+
+                    {/* Prilog Lj table - prikaži samo ako ima podataka */}
+                    {prilogMData.size > 0 && (
+                        <PrilogLjTable 
+                            prilogMData={prilogMData}
+                            procenaId={procenaId}
+                            onUpdateOpis={async (sectionId: string, opis: string) => {
+                                try {
+                                    const response = await fetch(`/api/procena/${procenaId}/prilog-lj?sectionId=${sectionId}`, {
+                                        method: 'PATCH',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({
+                                            opisIdentifikovanihRizika: opis
+                                        }),
+                                    });
+
+                                    if (!response.ok) {
+                                        throw new Error('Failed to update opis');
+                                    }
+
+                                    console.log(`✅ Updated Prilog Lj opis for section ${sectionId}`);
+                                } catch (error) {
+                                    console.error('Error updating Prilog Lj opis:', error);
+                                    alert('Грешка при чувању описа. Покушајте поново.');
+                                }
+                            }}
+                        />
+                    )}
+
+                    {/* Prilog S table - prikaži uvek */}
+                    <PrilogSTable 
+                        procenaId={procenaId}
+                        onUpdateItem={async (itemId: number, vrednost: string) => {
+                            console.log(`✅ Updated Prilog S item ${itemId} with value: ${vrednost}`);
+                        }}
+                    />
                 </div>
             )}
 
@@ -256,27 +279,11 @@ export default function RiskAssessmentContent({
                     procenaId={procenaId}
                     initialData={currentFinancialData || undefined}
                     onSave={(data) => {
-                        console.log('🔍 RiskAssessmentContent - onSave called with data:', data);
+                        // Jednostavno ažuriraj lokalne podatke bez dodatnih API poziva
                         const isValid = data.poslovniPrihodi > 0 && data.vrednostImovine > 0;
-                        console.log('🔍 RiskAssessmentContent - setting hasValidFinancialData to:', isValid);
                         setHasValidFinancialData(isValid);
                         setCurrentFinancialData(data);
                         setShowFinancialForm(false);
-                        setTimeout(async () => {
-                            try {
-                                const finResponse = await fetch(`/api/procena/${procenaId}/financial-data`);
-                                if (finResponse.ok) {
-                                    const finData = await finResponse.json();
-                                    console.log('🔍 RiskAssessmentContent - reloaded data:', finData);
-                                    setCurrentFinancialData(finData);
-                                    const reloadedIsValid = finData.poslovniPrihodi > 0 && finData.vrednostImovine > 0;
-                                    console.log('🔍 RiskAssessmentContent - setting hasValidFinancialData to (reloaded):', reloadedIsValid);
-                                    setHasValidFinancialData(reloadedIsValid);
-                                }
-                            } catch (error) {
-                                console.error('Error reloading financial data:', error);
-                            }
-                        }, 100);
                     }}
                     onClose={() => setShowFinancialForm(false)}
                 />

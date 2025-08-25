@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { RiskGroupData } from "../../data/riskGroups";
 import { PrilogMData } from "../../data/riskDataLoader";
 
@@ -19,14 +19,14 @@ export function useRiskAssessmentData(
     procenaId: string,
     riskGroupData: RiskGroupData,
     onSelectionChange?: (selections: RiskSelection[]) => void,
-    onPrilogMUpdate?: (prilogMData: PrilogMData[]) => void,
-    allPrilogMData?: Map<string, PrilogMData[]> // Dodaj prosleđene podatke
+    onPrilogMUpdate?: (prilogMData: PrilogMData[]) => void
 ) {
     const [selections, setSelections] = useState<Map<string, RiskSelection>>(new Map());
     const [prilogMData, setPrilogMData] = useState<Map<string, PrilogMData>>(new Map());
     const [initialLoading, setInitialLoading] = useState(true);
     const [hasValidFinancialData, setHasValidFinancialData] = useState(false);
     const [currentFinancialData, setCurrentFinancialData] = useState<FinancialData | null>(null);
+    const loadedRef = useRef(false); // Koristi ref umesto state da se izbegnu rerenderovanja
 
     // Load financial data
     const loadFinancialData = useCallback(async () => {
@@ -45,8 +45,11 @@ export function useRiskAssessmentData(
         return false;
     }, [procenaId]);
 
-    // Load existing data on mount
+    // Load existing data on mount - SAMO JEDNOM
     useEffect(() => {
+        if (loadedRef.current) return; // Ako su podaci već učitani, ne radi ništa
+        loadedRef.current = true; // Označi da su podaci učitani
+        
         async function loadExistingData() {
             try {
                 // Check financial data
@@ -80,37 +83,13 @@ export function useRiskAssessmentData(
                     }
                 }
 
-                // Load Prilog M data - koristi prosleđene podatke ili učitaj iz API-ja
-                if (allPrilogMData) {
-                    // Koristi prosleđene podatke
-                    const prilogMMap = new Map<string, PrilogMData>();
-                    
-                    // Konvertuj iz Map<string, PrilogMData[]> u Map<string, PrilogMData>
-                    allPrilogMData.forEach((groupData) => {
-                        groupData.forEach(item => {
-                            prilogMMap.set(item.id, item);
-                        });
-                    });
-
-
-
-                    setPrilogMData(prilogMMap);
-
-                    // Za callback, pošalji samo podatke trenutne grupe
-                    if (onPrilogMUpdate) {
-                        const currentGroupData = Array.from(prilogMMap.values()).filter(item => 
-                            item.groupId === riskGroupData.id
-                        );
-                        onPrilogMUpdate(currentGroupData);
-                    }
-                } else {
-                    // Učitaj iz API-ja kao fallback
+                // Load Prilog M data - uvek učitaj iz API-ja da dobiješ najnovije podatke uključujući sekcijske ID-jeve
+                {
+                    // Učitaj iz API-ja
                     const prilogMResponse = await fetch(`/api/procena/${procenaId}/prilog-m`);
                     if (prilogMResponse.ok) {
                         const prilogMData = await prilogMResponse.json();
                         const prilogMMap = new Map<string, PrilogMData>();
-
-
 
                         // Učitaj SVE podatke, ne filtriraj po grupi
                         prilogMData.forEach((item: unknown) => {
@@ -132,6 +111,8 @@ export function useRiskAssessmentData(
                                 kategorijarizika?: number;
                                 kategorijaRizika?: number;
                                 prihvatljivost: 'PRIHVATLJIV' | 'NEPRIHVATLJIV' | null;
+                                opisidentifikovanihrizika?: string;
+                                opisIdentifikovanihRizika?: string;
                             };
 
                             const mappedItem: PrilogMData = {
@@ -147,18 +128,17 @@ export function useRiskAssessmentData(
                                 kriticnost: dbItem.kriticnost || null,
                                 nivoRizika: dbItem.nivorizika || dbItem.nivoRizika || null,
                                 kategorijaRizika: dbItem.kategorijarizika || dbItem.kategorijaRizika || null,
-                                prihvatljivost: dbItem.prihvatljivost
+                                prihvatljivost: dbItem.prihvatljivost,
+                                opisIdentifikovanihRizika: dbItem.opisidentifikovanihrizika || dbItem.opisIdentifikovanihRizika || null
                             };
                             prilogMMap.set(mappedItem.id, mappedItem);
                         });
-
-
 
                         setPrilogMData(prilogMMap);
 
                         // Za callback, pošalji samo podatke trenutne grupe
                         if (onPrilogMUpdate) {
-                            const currentGroupData = Array.from(prilogMMap.values()).filter(item => 
+                            const currentGroupData = Array.from(prilogMMap.values()).filter(item =>
                                 item.groupId === riskGroupData.id
                             );
                             onPrilogMUpdate(currentGroupData);
@@ -173,26 +153,37 @@ export function useRiskAssessmentData(
             }
         }
 
-        if (procenaId && riskGroupData) {
+        if (procenaId && riskGroupData.id) {
             loadExistingData();
         }
-    }, [procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate, loadFinancialData, allPrilogMData]);
+    }, [procenaId, riskGroupData.id]); // Samo stabilni identifikatori
 
-    // Listen for financial data saved events
-    useEffect(() => {
-        const handleFinancialDataSaved = async (event: Event) => {
-            const customEvent = event as CustomEvent;
-            if (customEvent.detail.procenaId === procenaId) {
-                await loadFinancialData();
-            }
-        };
+    // Listen for financial data saved events - UKLANJAM OVO JER NIJE POTREBNO
+    // useEffect(() => {
+    //     const handleFinancialDataSaved = async (event: Event) => {
+    //         const customEvent = event as CustomEvent;
+    //         if (customEvent.detail.procenaId === procenaId) {
+    //             // Pozovi loadFinancialData direktno bez dependency
+    //             try {
+    //                 const finResponse = await fetch(`/api/procena/${procenaId}/financial-data`);
+    //                 if (finResponse.ok) {
+    //                     const finData = await finResponse.json();
+    //                     const hasValid = finData.poslovniPrihodi > 0 && finData.vrednostImovine > 0;
+    //                     setHasValidFinancialData(hasValid);
+    //                     setCurrentFinancialData(finData);
+    //                 }
+    //             } catch (error) {
+    //                 console.error('Error loading financial data:', error);
+    //             }
+    //         }
+    //     };
 
-        window.addEventListener('financialDataSaved', handleFinancialDataSaved);
+    //     window.addEventListener('financialDataSaved', handleFinancialDataSaved);
 
-        return () => {
-            window.removeEventListener('financialDataSaved', handleFinancialDataSaved);
-        };
-    }, [procenaId, loadFinancialData]);
+    //     return () => {
+    //         window.removeEventListener('financialDataSaved', handleFinancialDataSaved);
+    //     };
+    // }, [procenaId]); // Uklonio loadFinancialData iz dependencies
 
     return {
         selections,

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { UTICAJ_DELATNOSTI } from '../data/riskDataLoader';
 
 interface FinancialData {
@@ -18,63 +18,15 @@ interface FinancialDataFormProps {
 }
 
 export default function FinancialDataForm({ procenaId, initialData, onSave, onClose }: FinancialDataFormProps) {
-  console.log('🔍 FinancialDataForm - component rendered with initialData:', initialData);
-  
+  // Jednostavno - koristi initialData ili default vrednosti, bez API poziva
   const [formData, setFormData] = useState<FinancialData>({
-    poslovniPrihodi: initialData?.poslovniPrihodi ?? 0,
-    vrednostImovine: initialData?.vrednostImovine ?? 0,
+    poslovniPrihodi: initialData?.poslovniPrihodi ?? 1000000,
+    vrednostImovine: initialData?.vrednostImovine ?? 5000000,
     delatnost: initialData?.delatnost || 'default',
     stvarnaSteta: initialData?.stvarnaSteta ?? 0
   });
   
-  const [dataLoaded, setDataLoaded] = useState(false);
-  
-  console.log('🔍 FinancialDataForm - initial formData:', formData);
-
   const [saving, setSaving] = useState(false);
-
-  // Učitaj podatke direktno ako initialData nije dostupno
-  useEffect(() => {
-    async function loadData() {
-      if (!initialData && !dataLoaded) {
-        console.log('🔍 FinancialDataForm - loading data directly from API');
-        try {
-          const response = await fetch(`/api/procena/${procenaId}/financial-data`);
-          if (response.ok) {
-            const data = await response.json();
-            console.log('🔍 FinancialDataForm - loaded data from API:', data);
-            setFormData({
-              poslovniPrihodi: data.poslovniPrihodi ?? 0,
-              vrednostImovine: data.vrednostImovine ?? 0,
-              delatnost: data.delatnost || 'default',
-              stvarnaSteta: data.stvarnaSteta ?? 0
-            });
-            setDataLoaded(true);
-          }
-        } catch (error) {
-          console.error('Error loading financial data:', error);
-        }
-      }
-    }
-    
-    loadData();
-  }, [procenaId, initialData, dataLoaded]);
-
-  // Ažuriraj formu kada se initialData promeni
-  useEffect(() => {
-    console.log('🔍 FinancialDataForm - initialData changed:', initialData);
-    if (initialData) {
-      const newFormData = {
-        poslovniPrihodi: initialData.poslovniPrihodi ?? 0,
-        vrednostImovine: initialData.vrednostImovine ?? 0,
-        delatnost: initialData.delatnost || 'default',
-        stvarnaSteta: initialData.stvarnaSteta ?? 0
-      };
-      console.log('🔍 FinancialDataForm - setting form data from initialData:', newFormData);
-      setFormData(newFormData);
-      setDataLoaded(true);
-    }
-  }, [initialData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,7 +45,7 @@ export default function FinancialDataForm({ procenaId, initialData, onSave, onCl
     setSaving(true);
 
     try {
-      // Sačuvaj finansijske podatke
+      // Sačuvaj finansijske podatke - SAMO OVDE SE POZIVA API
       const response = await fetch(`/api/procena/${procenaId}/financial-data`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -101,16 +53,6 @@ export default function FinancialDataForm({ procenaId, initialData, onSave, onCl
       });
 
       if (response.ok) {
-        // Emituj custom event da su finansijski podaci sačuvani
-        const event = new CustomEvent('financialDataSaved', {
-          detail: { 
-            procenaId: procenaId,
-            data: formData 
-          }
-        });
-        window.dispatchEvent(event);
-        console.log('🔍 FinancialDataForm - emitted financialDataSaved event');
-        
         onSave(formData);
         onClose();
       } else {

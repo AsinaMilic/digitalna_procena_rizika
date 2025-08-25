@@ -99,7 +99,7 @@ export default function RiskAssessmentMainTable({
                                 <td
                                     key="na"
                                     className={getCellClass(item.id, 0, true)} // Using 0 for N/A level
-                                    onClick={() => onCellClick(item.id, 0, "Није променљиво / Not Applicable")}
+                                    onClick={() => onCellClick(item.id, 0, "Није применљиво / Not Applicable")}
                                 >
                                     <div className="text-center font-medium text-gray-700">
                                         Н/А

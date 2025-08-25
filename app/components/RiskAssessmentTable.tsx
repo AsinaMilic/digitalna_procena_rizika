@@ -16,7 +16,6 @@ interface RiskSelection {
 interface RiskAssessmentTableProps {
     procenaId: string;
     riskGroupData: RiskGroupData;
-    allPrilogMData?: Map<string, PrilogMData[]>; // Dodaj sve podatke kao prop
     onSelectionChange?: (selections: RiskSelection[]) => void;
     onPrilogMUpdate?: (prilogMData: PrilogMData[]) => void;
     onUnsavedChanges?: (hasUnsaved: boolean) => void;
@@ -24,7 +23,7 @@ interface RiskAssessmentTableProps {
 
 
 
-export default function RiskAssessmentTable({ procenaId, riskGroupData, allPrilogMData, onSelectionChange, onPrilogMUpdate, onUnsavedChanges }: RiskAssessmentTableProps) {
+export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate, onUnsavedChanges }: RiskAssessmentTableProps) {
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
     // Use custom hooks for data management
@@ -38,7 +37,7 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, allPrilo
         setHasValidFinancialData,
         currentFinancialData,
         setCurrentFinancialData
-    } = useRiskAssessmentData(procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate, allPrilogMData);
+    } = useRiskAssessmentData(procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate);
 
     // Use custom hook for actions
     const {
@@ -58,7 +57,9 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, allPrilo
         setPrilogMData,
         onSelectionChange,
         onPrilogMUpdate,
-        setHasUnsavedChanges
+        setHasUnsavedChanges,
+        currentFinancialData,
+        hasValidFinancialData
     });
 
 
@@ -80,7 +81,7 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, allPrilo
         return getCellClass(riskId, level, hasContent, selections);
     };
 
-    const handlePrilogMItemUpdate = (itemId: string, field: 'posledice' | 'steta', value: number) => {
+    const handlePrilogMItemUpdate = (itemId: string, field: 'posledice' | 'steta' | 'opisIdentifikovanihRizika', value: number | string) => {
         setPrilogMData(prevData => {
             const newData = new Map(prevData);
             const item = newData.get(itemId);

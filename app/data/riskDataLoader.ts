@@ -26,6 +26,7 @@ export interface PrilogMData {
   nivoRizika: number | null; // Kolona 10 - V × P (iz matrice)
   kategorijaRizika: number | null; // Kolona 11 - prema tabeli P.1
   prihvatljivost: 'PRIHVATLJIV' | 'NEPRIHVATLJIV' | null; // Kolona 12 - prema tabeli P.2
+  opisIdentifikovanihRizika?: string | null; // Opis identifikovanih rizika za PrilogLj
   usingDefaultFinancialData?: boolean; // Indikator da li se koriste default finansijski podaci
 }
 

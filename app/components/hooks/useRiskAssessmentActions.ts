@@ -8,12 +8,14 @@ interface RiskSelection {
     description: string;
 }
 
-// interface FinancialData {
-//     poslovniPrihodi: number;
-//     vrednostImovine: number;
-//     delatnost: string;
-//     stvarnaSteta: number;
-// }
+
+
+interface FinancialData {
+    poslovniPrihodi: number;
+    vrednostImovine: number;
+    delatnost: string;
+    stvarnaSteta: number;
+}
 
 interface UseRiskAssessmentActionsProps {
     procenaId: string;
@@ -25,6 +27,8 @@ interface UseRiskAssessmentActionsProps {
     onSelectionChange?: (selections: RiskSelection[]) => void;
     onPrilogMUpdate?: (prilogMData: PrilogMData[]) => void;
     setHasUnsavedChanges: (hasUnsaved: boolean) => void;
+    currentFinancialData: FinancialData | null; // Dodaj finansijske podatke
+    hasValidFinancialData: boolean; // Dodaj flag za validnost
 }
 
 export function useRiskAssessmentActions({
@@ -36,7 +40,9 @@ export function useRiskAssessmentActions({
     setPrilogMData,
     onSelectionChange,
     onPrilogMUpdate,
-    setHasUnsavedChanges
+    setHasUnsavedChanges,
+    currentFinancialData,
+    hasValidFinancialData
 }: UseRiskAssessmentActionsProps) {
     const [loading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -109,52 +115,20 @@ export function useRiskAssessmentActions({
         newSelections.set(riskId, newSelection);
         setSelections(newSelections);
 
-        // Load financial data for accurate calculation
-        let financialData = null;
+        // Use passed financial data instead of making API call
+        let financialData: FinancialData;
         let usingDefaultValues = false;
 
-        try {
-            const finResponse = await fetch(`/api/procena/${procenaId}/financial-data`);
-            if (finResponse.ok) {
-                const finData = await finResponse.json();
-                if ((!finData.poslovniPrihodi || finData.poslovniPrihodi === 0) &&
-                    (!finData.vrednostImovine || finData.vrednostImovine === 0)) {
-                    usingDefaultValues = true;
-                }
-
-                if (usingDefaultValues) {
-                    financialData = {
-                        poslovniPrihodi: 1000000,
-                        vrednostImovine: 5000000,
-                        delatnost: finData.delatnost || 'default',
-                        stvarnaSteta: finData.stvarnaSteta ?? 0
-                    };
-                } else {
-                    financialData = {
-                        poslovniPrihodi: finData.poslovniPrihodi,
-                        vrednostImovine: finData.vrednostImovine,
-                        delatnost: finData.delatnost || 'default',
-                        stvarnaSteta: finData.stvarnaSteta ?? 0
-                    };
-                }
-            } else {
-                usingDefaultValues = true;
-                financialData = {
-                    poslovniPrihodi: 1000000,
-                    vrednostImovine: 5000000,
-                    delatnost: 'default',
-                    stvarnaSteta: 0
-                };
-            }
-        } catch (error) {
-            console.warn('Error loading financial data:', error);
+        if (!hasValidFinancialData || !currentFinancialData) {
             usingDefaultValues = true;
             financialData = {
                 poslovniPrihodi: 1000000,
                 vrednostImovine: 5000000,
-                delatnost: 'default',
-                stvarnaSteta: 0
+                delatnost: currentFinancialData?.delatnost || 'default',
+                stvarnaSteta: currentFinancialData?.stvarnaSteta ?? 0
             };
+        } else {
+            financialData = currentFinancialData;
         }
 
         // Calculate Prilog M data according to SRPS A.L2.003:2025

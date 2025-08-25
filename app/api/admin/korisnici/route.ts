@@ -1,6 +1,6 @@
-import {NextRequest, NextResponse} from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
-import {getDbConnection} from '../../../../lib/db';
+import { getDbConnection } from '../../../../lib/db';
 
 interface JWTPayload {
     id: number;
@@ -12,11 +12,11 @@ export async function GET(request: NextRequest) {
     try {
         const token = request.headers.get('authorization')?.replace('Bearer ', '');
         if (!token) {
-            return NextResponse.json({greška: 'Nemate dozvolu'}, {status: 401});
+            return NextResponse.json({ greška: 'Nemate dozvolu' }, { status: 401 });
         }
         const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
         if (!decoded.je_admin) {
-            return NextResponse.json({greška: 'Nemate admin dozvolu'}, {status: 403});
+            return NextResponse.json({ greška: 'Nemate admin dozvolu' }, { status: 403 });
         }
         const pool = await getDbConnection();
         const result = await pool.query(`
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(result.rows);
     } catch (error) {
         console.error('Greška:', error);
-        return NextResponse.json({greška: 'Došlo je do greške'}, {status: 500});
+        return NextResponse.json({ greška: 'Došlo je do greške' }, { status: 500 });
     }
 }
 
@@ -37,13 +37,13 @@ export async function PUT(request: NextRequest) {
     try {
         const token = request.headers.get('authorization')?.replace('Bearer ', '');
         if (!token) {
-            return NextResponse.json({greška: 'Nemate dozvolu'}, {status: 401});
+            return NextResponse.json({ greška: 'Nemate dozvolu' }, { status: 401 });
         }
         const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
         if (!decoded.je_admin) {
-            return NextResponse.json({greška: 'Nemate admin dozvolu'}, {status: 403});
+            return NextResponse.json({ greška: 'Nemate admin dozvolu' }, { status: 403 });
         }
-        const {korisnikId, status} = await request.json();
+        const { korisnikId, status } = await request.json();
         const pool = await getDbConnection();
         await pool.query(`
         UPDATE korisnici 
@@ -52,9 +52,9 @@ export async function PUT(request: NextRequest) {
             odobrio_admin = $2
         WHERE id = $3
       `, [status, decoded.id, korisnikId]);
-        return NextResponse.json({poruka: 'Uspešno ažurirano'});
+        return NextResponse.json({ poruka: 'Uspešno ažurirano' });
     } catch (error) {
         console.error('Greška:', error);
-        return NextResponse.json({greška: 'Došlo je do greške'}, {status: 500});
+        return NextResponse.json({ greška: 'Došlo je do greške' }, { status: 500 });
     }
 }

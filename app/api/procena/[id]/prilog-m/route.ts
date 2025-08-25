@@ -89,8 +89,9 @@ export async function POST(
               stepenSS = $12,
               stepenVMSH = $13,
               vmshIznos = $14,
+              opisIdentifikovanihRizika = $15,
               updatedAt = CURRENT_TIMESTAMP
-            WHERE procenaId = $15 AND itemId = $16 AND groupId = $17
+            WHERE procenaId = $16 AND itemId = $17 AND groupId = $18
           `, [
           prilogMItem.requirement || '',
           prilogMItem.velicinaOpasnosti,
@@ -106,6 +107,7 @@ export async function POST(
           stepenSS,
           stepenVMSH,
           vmsh,
+          prilogMItem.opisIdentifikovanihRizika || null,
           procenaId,
           prilogMItem.id,
           prilogMItem.groupId
@@ -116,9 +118,9 @@ export async function POST(
             INSERT INTO PrilogM (
               procenaId, itemId, groupId, requirement, velicinaOpasnosti, izlozenost, ranjivost,
               verovatnoca, steta, kriticnost, posledice, nivoRizika, kategorijaRizika, prihvatljivost,
-              stepenSS, stepenVMSH, vmshIznos, createdAt, updatedAt
+              stepenSS, stepenVMSH, vmshIznos, opisIdentifikovanihRizika, createdAt, updatedAt
             ) VALUES (
-              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
             )
           `, [
           procenaId,
@@ -137,7 +139,8 @@ export async function POST(
           prilogMItem.prihvatljivost,
           stepenSS,
           stepenVMSH,
-          vmsh
+          vmsh,
+          prilogMItem.opisIdentifikovanihRizika || null
         ]);
       }
     });
@@ -192,7 +195,7 @@ export async function GET(
           SELECT 
             itemId as id, groupId, requirement, velicinaOpasnosti, izlozenost, ranjivost,
             verovatnoca, steta, kriticnost, posledice, nivoRizika, kategorijaRizika, prihvatljivost,
-            stepenSS, stepenVMSH, vmshIznos
+            stepenSS, stepenVMSH, vmshIznos, opisIdentifikovanihRizika
           FROM PrilogM 
           WHERE procenaId = $1
           ORDER BY groupId, itemId
@@ -228,20 +231,30 @@ export async function PATCH(
     }
 
     // Validacija polja
-    const allowedFields = ['posledice', 'steta'];
+    const allowedFields = ['posledice', 'steta', 'opisIdentifikovanihRizika'];
     const updateFields = Object.keys(updateData).filter(field => allowedFields.includes(field));
     
     if (updateFields.length === 0) {
       return NextResponse.json({ error: 'Nema validnih polja za ažuriranje' }, { status: 400 });
     }
 
-    // Validacija vrednosti (1-5)
+    // Validacija vrednosti
     for (const field of updateFields) {
       const value = updateData[field];
-      if (typeof value !== 'number' || value < 1 || value > 5) {
-        return NextResponse.json({ 
-          error: `Vrednost za ${field} mora biti broj između 1 i 5` 
-        }, { status: 400 });
+      if (field === 'opisIdentifikovanihRizika') {
+        // Za opis, proveravamo da li je string
+        if (typeof value !== 'string') {
+          return NextResponse.json({ 
+            error: `Vrednost za ${field} mora biti tekst` 
+          }, { status: 400 });
+        }
+      } else {
+        // Za numerička polja (posledice, steta)
+        if (typeof value !== 'number' || value < 1 || value > 5) {
+          return NextResponse.json({ 
+            error: `Vrednost za ${field} mora biti broj između 1 i 5` 
+          }, { status: 400 });
+        }
       }
     }
 
@@ -255,20 +268,27 @@ export async function PATCH(
       );
 
       if (existingRecord.rows.length === 0) {
-        throw new Error('Stavka ne postoji');
+        // Stavka ne postoji - ovo znači da rizik nije još uvek procenjen
+        // Umesto da bacamo grešku, jednostavno ne radimo ništa za opisIdentifikovanihRizika
+        if (updateFields.includes('opisIdentifikovanihRizika')) {
+          console.log(`⚠️ Pokušaj ažuriranja opisa za nepostojećу stavku ${itemId} - preskačemo`);
+          return; // Izađi iz funkcije bez greške
+        } else {
+          throw new Error('Stavka ne postoji');
+        }
+      } else {
+        // Ako stavka postoji, ažuriraj je
+        const setClause = updateFields.map((field, index) => `${field} = $${index + 3}`).join(', ');
+        const values = [procenaId, itemId, ...updateFields.map(field => updateData[field])];
+
+        const query = `
+          UPDATE PrilogM 
+          SET ${setClause}, updatedAt = CURRENT_TIMESTAMP
+          WHERE procenaId = $1 AND itemId = $2
+        `;
+
+        await pool.query(query, values);
       }
-
-      // Pripremi SQL za ažuriranje
-      const setClause = updateFields.map((field, index) => `${field} = $${index + 3}`).join(', ');
-      const values = [procenaId, itemId, ...updateFields.map(field => updateData[field])];
-
-      const query = `
-        UPDATE PrilogM 
-        SET ${setClause}, updatedAt = CURRENT_TIMESTAMP
-        WHERE procenaId = $1 AND itemId = $2
-      `;
-
-      await pool.query(query, values);
     });
 
     console.log(`✅ Ažurirano polje/polja za stavku ${itemId}:`, updateData);
@@ -312,7 +332,7 @@ export async function PUT(
           SELECT 
             itemId as id, groupId, requirement, velicinaOpasnosti, izlozenost, ranjivost,
             verovatnoca, steta, kriticnost, posledice, nivoRizika, kategorijaRizika, prihvatljivost,
-            stepenSS, stepenVMSH, vmshIznos
+            stepenSS, stepenVMSH, vmshIznos, opisIdentifikovanihRizika
           FROM PrilogM 
           WHERE procenaId = $1
           ORDER BY groupId, itemId
