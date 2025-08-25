@@ -100,6 +100,8 @@ export async function createRiskAssessmentTables() {
         korisnikId INTEGER,
         pravnoLiceId INTEGER,
         status VARCHAR(50) DEFAULT 'u_toku',
+        naziv_usluge TEXT,
+        datum_izrade DATE,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (korisnikId) REFERENCES korisnici(id),

@@ -75,7 +75,14 @@ export async function GET() {
                 pl.adresa,
                 pr.id as procenaId,
                 pr.createdAt as datum,
-                pr.status
+                pr.status,
+                pr.naziv_usluge,
+                pr.datum_izrade,
+                CASE 
+                    WHEN pr.datum_izrade IS NOT NULL 
+                    THEN pr.datum_izrade + INTERVAL '3 years'
+                    ELSE NULL 
+                END as rok_vazenja
             FROM PravnoLice pl
             LEFT JOIN ProcenaRizika pr ON pl.id = pr.pravnoLiceId
             ORDER BY pl.id, pr.createdAt DESC
@@ -100,7 +107,10 @@ export async function GET() {
                     id: row.procenaid,
                     datum: row.datum,
                     status: row.status,
-                    pravnoLiceId: row.id
+                    pravnoLiceId: row.id,
+                    naziv_usluge: row.naziv_usluge,
+                    datum_izrade: row.datum_izrade,
+                    rok_vazenja: row.rok_vazenja
                 });
             }
         });

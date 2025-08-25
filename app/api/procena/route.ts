@@ -97,3 +97,45 @@ export async function POST(request: NextRequest) {
         );
     }
 }
+
+export async function PUT(request: NextRequest) {
+    try {
+        const { procenaId, naziv_usluge, datum_izrade } = await request.json();
+        
+        if (!procenaId) {
+            return NextResponse.json(
+                { error: 'procenaId je obavezan' },
+                { status: 400 }
+            );
+        }
+
+        const pool = await getDbConnection();
+        
+        // Ažuriraj procenu sa novim podacima
+        const result = await pool.query(`
+            UPDATE ProcenaRizika 
+            SET naziv_usluge = $1, datum_izrade = $2, updatedAt = CURRENT_TIMESTAMP
+            WHERE id = $3
+            RETURNING id, naziv_usluge, datum_izrade, 
+                     datum_izrade + INTERVAL '3 years' as rok_vazenja
+        `, [naziv_usluge, datum_izrade, procenaId]);
+
+        if (result.rows.length === 0) {
+            return NextResponse.json(
+                { error: 'Procena sa datim ID ne postoji' },
+                { status: 404 }
+            );
+        }
+
+        return NextResponse.json({
+            success: true,
+            data: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Greška pri ažuriranju procene:', error);
+        return NextResponse.json(
+            { error: 'Greška pri ažuriranju procene' },
+            { status: 500 }
+        );
+    }
+}
