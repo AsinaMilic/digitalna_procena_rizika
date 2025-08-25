@@ -1,15 +1,51 @@
 "use client";
+import { useState } from "react";
 import { PrilogMData } from "../data/riskDataLoader";
 
 interface PrilogMTableProps {
     prilogMData: Map<string, PrilogMData>;
     onShowDetails: (item: PrilogMData) => void;
+    onUpdateItem?: (itemId: string, field: 'posledice' | 'steta', value: number) => void;
 }
 
-export default function PrilogMTable({ prilogMData, onShowDetails }: PrilogMTableProps) {
+export default function PrilogMTable({ prilogMData, onShowDetails, onUpdateItem }: PrilogMTableProps) {
+    const [editingCell, setEditingCell] = useState<string | null>(null);
+    const [editValue, setEditValue] = useState<string>('');
+
     if (prilogMData.size === 0) {
         return null;
     }
+
+    const handleCellClick = (itemId: string, field: 'posledice' | 'steta', currentValue: number | null) => {
+        const cellKey = `${itemId}-${field}`;
+        setEditingCell(cellKey);
+        setEditValue(currentValue?.toString() || '');
+    };
+
+    const handleInputChange = (value: string) => {
+        // Dozvoli samo brojeve 1-5
+        if (value === '' || (/^[1-5]$/.test(value))) {
+            setEditValue(value);
+        }
+    };
+
+    const handleInputBlur = (itemId: string, field: 'posledice' | 'steta') => {
+        const numValue = parseInt(editValue);
+        if (numValue >= 1 && numValue <= 5 && onUpdateItem) {
+            onUpdateItem(itemId, field, numValue);
+        }
+        setEditingCell(null);
+        setEditValue('');
+    };
+
+    const handleKeyPress = (e: React.KeyboardEvent, itemId: string, field: 'posledice' | 'steta') => {
+        if (e.key === 'Enter') {
+            handleInputBlur(itemId, field);
+        } else if (e.key === 'Escape') {
+            setEditingCell(null);
+            setEditValue('');
+        }
+    };
 
     return (
         <div className="p-6 bg-white border-2 border-gray-800 rounded-lg">
@@ -23,6 +59,7 @@ export default function PrilogMTable({ prilogMData, onShowDetails }: PrilogMTabl
                             <th className="border border-gray-800 px-1 py-2 text-center font-bold text-gray-800" style={{ width: '60px' }}>
                                 Р.<br />бр.
                             </th>
+
                             <th className="border border-gray-800 px-2 py-2 text-center font-bold text-gray-800" style={{ minWidth: '200px' }}>
                                 ЗАХТЕВИ ЗА ПРОЦЕНУ РИЗИКА
                             </th>
@@ -62,6 +99,7 @@ export default function PrilogMTable({ prilogMData, onShowDetails }: PrilogMTabl
                         </tr>
                         <tr className="bg-gray-100">
                             <th className="border border-gray-800 px-1 py-1 text-center text-xs font-medium text-gray-600">1</th>
+
                             <th className="border border-gray-800 px-1 py-1 text-center text-xs font-medium text-gray-600">2</th>
                             <th className="border border-gray-800 px-1 py-1 text-center text-xs font-medium text-gray-600">3</th>
                             <th className="border border-gray-800 px-1 py-1 text-center text-xs font-medium text-gray-600">4</th>
@@ -97,6 +135,7 @@ export default function PrilogMTable({ prilogMData, onShowDetails }: PrilogMTabl
                                     <td className="border border-gray-800 px-1 py-2 text-center font-medium text-gray-800 text-xs">
                                         {item.id}
                                     </td>
+
                                     <td className="border border-gray-800 px-2 py-2 text-xs text-gray-800 align-top">
                                         {item.requirement || 'Захтев за процену ризика'}
                                     </td>
@@ -137,22 +176,56 @@ export default function PrilogMTable({ prilogMData, onShowDetails }: PrilogMTabl
                                         </span>
                                     </td>
                                     <td className="border border-gray-800 px-1 py-2 text-center">
-                                        <span className={`inline-block w-6 h-6 rounded-full text-white font-bold text-xs leading-6 ${(item.posledice || 0) >= 4 ? 'bg-red-600' :
-                                            (item.posledice || 0) === 3 ? 'bg-yellow-600' :
-                                                (item.posledice || 0) === 2 ? 'bg-blue-600' :
-                                                    'bg-green-600'
-                                            }`}>
-                                            {item.posledice || 0}
-                                        </span>
+                                        {editingCell === `${item.id}-posledice` ? (
+                                            <input
+                                                type="text"
+                                                value={editValue}
+                                                onChange={(e) => handleInputChange(e.target.value)}
+                                                onBlur={() => handleInputBlur(item.id, 'posledice')}
+                                                onKeyDown={(e) => handleKeyPress(e, item.id, 'posledice')}
+                                                className="w-6 h-6 text-center text-xs border-2 border-blue-500 rounded bg-white text-black font-bold focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                                maxLength={1}
+                                                autoFocus
+                                            />
+                                        ) : (
+                                            <span
+                                                className={`inline-block w-6 h-6 rounded-full text-white font-bold text-xs leading-6 cursor-pointer hover:opacity-80 ${(item.posledice || 0) >= 4 ? 'bg-red-600' :
+                                                    (item.posledice || 0) === 3 ? 'bg-yellow-600' :
+                                                        (item.posledice || 0) === 2 ? 'bg-blue-600' :
+                                                            'bg-green-600'
+                                                    }`}
+                                                onClick={() => handleCellClick(item.id, 'posledice', item.posledice)}
+                                                title="Кликните да измените вредност (1-5)"
+                                            >
+                                                {item.posledice || 0}
+                                            </span>
+                                        )}
                                     </td>
                                     <td className="border border-gray-800 px-1 py-2 text-center">
-                                        <span className={`inline-block w-6 h-6 rounded-full text-white font-bold text-xs leading-6 ${(item.steta || 0) >= 4 ? 'bg-red-600' :
-                                            (item.steta || 0) === 3 ? 'bg-yellow-600' :
-                                                (item.steta || 0) === 2 ? 'bg-blue-600' :
-                                                    'bg-green-600'
-                                            }`}>
-                                            {item.steta || 0}
-                                        </span>
+                                        {editingCell === `${item.id}-steta` ? (
+                                            <input
+                                                type="text"
+                                                value={editValue}
+                                                onChange={(e) => handleInputChange(e.target.value)}
+                                                onBlur={() => handleInputBlur(item.id, 'steta')}
+                                                onKeyDown={(e) => handleKeyPress(e, item.id, 'steta')}
+                                                className="w-6 h-6 text-center text-xs border-2 border-blue-500 rounded bg-white text-black font-bold focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                                maxLength={1}
+                                                autoFocus
+                                            />
+                                        ) : (
+                                            <span
+                                                className={`inline-block w-6 h-6 rounded-full text-white font-bold text-xs leading-6 cursor-pointer hover:opacity-80 ${(item.steta || 0) >= 4 ? 'bg-red-600' :
+                                                    (item.steta || 0) === 3 ? 'bg-yellow-600' :
+                                                        (item.steta || 0) === 2 ? 'bg-blue-600' :
+                                                            'bg-green-600'
+                                                    }`}
+                                                onClick={() => handleCellClick(item.id, 'steta', item.steta)}
+                                                title="Кликните да измените вредност (1-5)"
+                                            >
+                                                {item.steta || 0}
+                                            </span>
+                                        )}
                                     </td>
                                     <td className="border border-gray-800 px-1 py-2 text-center">
                                         <span className={`inline-block w-6 h-6 rounded-full text-white font-bold text-xs leading-6 ${(item.kriticnost || 0) >= 4 ? 'bg-red-600' :

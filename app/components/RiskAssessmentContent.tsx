@@ -48,6 +48,7 @@ interface RiskAssessmentContentProps {
     onParametersSet: (params: { stepenIzlozenosti: number; stepenRanjivosti: number; kriticnost: number; }) => Promise<void>;
     onSaveChanges: () => Promise<void>;
     getCellClass: (riskId: string, level: number, hasContent: boolean) => string;
+    onPrilogMUpdate?: (itemId: string, field: 'posledice' | 'steta', value: number) => void;
 }
 
 export default function RiskAssessmentContent({
@@ -67,7 +68,8 @@ export default function RiskAssessmentContent({
     onCellClick,
     onParametersSet,
     onSaveChanges,
-    getCellClass
+    getCellClass,
+    onPrilogMUpdate
 }: RiskAssessmentContentProps) {
     const [selectedItemForDetails, setSelectedItemForDetails] = useState<PrilogMData | null>(null);
     const [showParametersForm, setShowParametersForm] = useState(false);
@@ -197,6 +199,33 @@ export default function RiskAssessmentContent({
                         <PrilogMTable
                             prilogMData={prilogMData}
                             onShowDetails={setSelectedItemForDetails}
+                            onUpdateItem={async (itemId: string, field: 'posledice' | 'steta', value: number) => {
+                                try {
+                                    const response = await fetch(`/api/procena/${procenaId}/prilog-m?itemId=${itemId}`, {
+                                        method: 'PATCH',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({
+                                            [field]: value
+                                        }),
+                                    });
+
+                                    if (!response.ok) {
+                                        throw new Error('Failed to update item');
+                                    }
+
+                                    console.log(`✅ Updated ${field} for item ${itemId} to ${value}`);
+                                    
+                                    // Pozovi callback za lokalno ažuriranje
+                                    if (onPrilogMUpdate) {
+                                        onPrilogMUpdate(itemId, field, value);
+                                    }
+                                } catch (error) {
+                                    console.error('Error updating item:', error);
+                                    alert('Грешка при чувању промене. Покушајте поново.');
+                                }
+                            }}
                         />
                     )}
                 </div>

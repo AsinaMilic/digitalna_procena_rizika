@@ -82,9 +82,15 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                         };
 
                         // Mapiranje polja iz baze na očekivani format
+                        // Mapiranje groupId - možda se čuva kao broj umesto "groupX"
+                        let groupId = dbItem.groupid || dbItem.groupId || '';
+                        if (groupId && !groupId.startsWith('group')) {
+                            groupId = `group${groupId}`;
+                        }
+
                         const mappedItem: PrilogMData = {
                             id: dbItem.id,
-                            groupId: dbItem.groupid || dbItem.groupId || '', // Podrška za oba formata
+                            groupId: groupId,
                             requirement: dbItem.requirement,
                             velicinaOpasnosti: dbItem.velicinaopasnosti || dbItem.velicinaOpasnosti || null,
                             izlozenost: dbItem.izlozenost || null,
@@ -98,16 +104,39 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                             prihvatljivost: dbItem.prihvatljivost
                         };
 
+                        // Debug: prikaži mapiranje groupId
+                        const originalGroupId = dbItem.groupid || dbItem.groupId || '';
+                        if (originalGroupId !== groupId) {
+                            console.log(`🔍 Mapiranje groupId: "${originalGroupId}" → "${groupId}"`);
+                        }
+
+
+
                         if (mappedItem.groupId && newPrilogMData.has(mappedItem.groupId)) {
                             const groupData = newPrilogMData.get(mappedItem.groupId) || [];
-                            groupData.push(mappedItem);
+                            // Proveri da li već postoji stavka sa istim ID-om
+                            const existingIndex = groupData.findIndex(existing => existing.id === mappedItem.id);
+                            if (existingIndex >= 0) {
+                                // Zameni postojeću stavku
+                                groupData[existingIndex] = mappedItem;
+                                console.log(`🔄 Zamenio stavku ${mappedItem.id} u grupi ${mappedItem.groupId}`);
+                            } else {
+                                // Dodaj novu stavku
+                                groupData.push(mappedItem);
+                                console.log(`➕ Dodao stavku ${mappedItem.id} u grupu ${mappedItem.groupId}`);
+                            }
                             newPrilogMData.set(mappedItem.groupId, groupData);
+                        } else {
+                            console.warn(`⚠️ Stavka ${mappedItem.id} ima nepoznat groupId: "${mappedItem.groupId}" (dostupne grupe: ${Array.from(newPrilogMData.keys()).join(', ')})`);
                         }
                     });
 
-                    console.log('🔍 Grupisani podaci po grupama:');
+                    // Debug: prikaži koliko stavki ima svaka grupa
+                    console.log('🔍 Finalni podaci po grupama:');
                     newPrilogMData.forEach((data, groupId) => {
-                        console.log(`  ${groupId}: ${data.length} stavki`);
+                        if (data.length > 0) {
+                            console.log(`  ${groupId}: ${data.length} stavki - ${data.map(item => item.id).join(', ')}`);
+                        }
                     });
 
                     setAllPrilogMData(newPrilogMData);
@@ -429,14 +458,39 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {RISK_GROUPS.map((group) => {
                             const isActive = group.id === activeGroupId;
-                            const completedItems = allPrilogMData.get(group.id)?.length || 0;
-
-                            // Izračunaj ukupan broj stavki u grupi
+                            
+                            // Filtriraj stavke po grupi na osnovu ID-ja stavke umesto groupId iz baze
                             const groupData = getRiskGroupData(group.id);
-                            const totalItems = groupData ? groupData.risks.reduce((sum, risk) => sum + risk.items.length, 0) : 0;
+                            const groupItemIds = new Set<string>();
+                            if (groupData) {
+                                groupData.risks.forEach(risk => {
+                                    risk.items.forEach(item => {
+                                        groupItemIds.add(item.id);
+                                    });
+                                });
+                            }
+                            
+                            // Broji samo stavke koje pripadaju ovoj grupi na osnovu ID-ja
+                            let completedItems = 0;
+                            const currentGroupItems = allPrilogMData.get(group.id) || [];
+                            currentGroupItems.forEach(item => {
+                                if (groupItemIds.has(item.id)) {
+                                    completedItems++;
+                                }
+                            });
+
+                            const totalItems = groupItemIds.size;
+
+                            // Debug informacije - samo za problematične grupe
+                            if (completedItems > totalItems && completedItems > 0) {
+                                console.warn(`⚠️ Grupa ${group.id}: completedItems (${completedItems}) > totalItems (${totalItems})`);
+                                const groupItems = allPrilogMData.get(group.id) || [];
+                                console.log('🔍 Stavke u grupi:', groupItems.map(item => ({ id: item.id, groupId: item.groupId })));
+                                console.log('🔍 Ukupno stavki u grupi iz definicije:', totalItems);
+                            }
 
                             const isCompleted = completedItems > 0;
-                            const completionPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+                            const completionPercentage = totalItems > 0 ? Math.min(100, Math.round((completedItems / totalItems) * 100)) : 0;
 
                             return (
                                 <button
@@ -481,7 +535,7 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                                                     completionPercentage > 0 ? 'bg-yellow-500' :
                                                         'bg-gray-300'
                                                     }`}
-                                                style={{ width: `${completionPercentage}%` }}
+                                                style={{ width: `${Math.min(100, completionPercentage)}%` }}
                                             ></div>
                                         </div>
                                     </div>
@@ -497,6 +551,7 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                         key={activeGroupId} // Add key to force remount when group changes
                         procenaId={procenaId}
                         riskGroupData={activeGroupData}
+                        allPrilogMData={allPrilogMData} // Proslijedi sve podatke
                         onSelectionChange={activeGroupSelectionCallback}
                         onPrilogMUpdate={activeGroupPrilogMCallback}
                         onUnsavedChanges={setHasUnsavedChanges}

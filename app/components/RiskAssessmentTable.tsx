@@ -16,6 +16,7 @@ interface RiskSelection {
 interface RiskAssessmentTableProps {
     procenaId: string;
     riskGroupData: RiskGroupData;
+    allPrilogMData?: Map<string, PrilogMData[]>; // Dodaj sve podatke kao prop
     onSelectionChange?: (selections: RiskSelection[]) => void;
     onPrilogMUpdate?: (prilogMData: PrilogMData[]) => void;
     onUnsavedChanges?: (hasUnsaved: boolean) => void;
@@ -23,7 +24,7 @@ interface RiskAssessmentTableProps {
 
 
 
-export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate, onUnsavedChanges }: RiskAssessmentTableProps) {
+export default function RiskAssessmentTable({ procenaId, riskGroupData, allPrilogMData, onSelectionChange, onPrilogMUpdate, onUnsavedChanges }: RiskAssessmentTableProps) {
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
     // Use custom hooks for data management
@@ -37,7 +38,7 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
         setHasValidFinancialData,
         currentFinancialData,
         setCurrentFinancialData
-    } = useRiskAssessmentData(procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate);
+    } = useRiskAssessmentData(procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate, allPrilogMData);
 
     // Use custom hook for actions
     const {
@@ -79,6 +80,18 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
         return getCellClass(riskId, level, hasContent, selections);
     };
 
+    const handlePrilogMItemUpdate = (itemId: string, field: 'posledice' | 'steta', value: number) => {
+        setPrilogMData(prevData => {
+            const newData = new Map(prevData);
+            const item = newData.get(itemId);
+            if (item) {
+                const updatedItem = { ...item, [field]: value };
+                newData.set(itemId, updatedItem);
+            }
+            return newData;
+        });
+    };
+
     if (initialLoading) {
         return (
             <div className="bg-white rounded-2xl p-8 shadow-xl border border-blue-100">
@@ -110,6 +123,7 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
             onParametersSet={handleParametersSet}
             onSaveChanges={handleSaveChanges}
             getCellClass={getCellClassWithSelections}
+            onPrilogMUpdate={handlePrilogMItemUpdate}
         />
     );
 }

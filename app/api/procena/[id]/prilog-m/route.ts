@@ -212,6 +212,88 @@ export async function GET(
 }
 
 // Endpoint za dobijanje agregiranih statistika
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const procenaId = parseInt(id);
+    const url = new URL(request.url);
+    const itemId = url.searchParams.get('itemId');
+    const updateData = await request.json();
+
+    if (!procenaId || !itemId) {
+      return NextResponse.json({ error: 'Nedostaju obavezni parametri' }, { status: 400 });
+    }
+
+    // Validacija polja
+    const allowedFields = ['posledice', 'steta'];
+    const updateFields = Object.keys(updateData).filter(field => allowedFields.includes(field));
+    
+    if (updateFields.length === 0) {
+      return NextResponse.json({ error: 'Nema validnih polja za ažuriranje' }, { status: 400 });
+    }
+
+    // Validacija vrednosti (1-5)
+    for (const field of updateFields) {
+      const value = updateData[field];
+      if (typeof value !== 'number' || value < 1 || value > 5) {
+        return NextResponse.json({ 
+          error: `Vrednost za ${field} mora biti broj između 1 i 5` 
+        }, { status: 400 });
+      }
+    }
+
+    await executeWithRetry(async () => {
+      const pool = await getDbConnection();
+
+      // Proveri da li stavka postoji
+      const existingRecord = await pool.query(
+        'SELECT * FROM PrilogM WHERE procenaId = $1 AND itemId = $2', 
+        [procenaId, itemId]
+      );
+
+      if (existingRecord.rows.length === 0) {
+        throw new Error('Stavka ne postoji');
+      }
+
+      // Pripremi SQL za ažuriranje
+      const setClause = updateFields.map((field, index) => `${field} = $${index + 3}`).join(', ');
+      const values = [procenaId, itemId, ...updateFields.map(field => updateData[field])];
+
+      const query = `
+        UPDATE PrilogM 
+        SET ${setClause}, updatedAt = CURRENT_TIMESTAMP
+        WHERE procenaId = $1 AND itemId = $2
+      `;
+
+      await pool.query(query, values);
+    });
+
+    console.log(`✅ Ažurirano polje/polja za stavku ${itemId}:`, updateData);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Stavka uspešno ažurirana',
+      updatedFields: updateFields
+    });
+
+  } catch (error: unknown) {
+    console.error('Greška pri ažuriranju stavke:', error);
+    const err = error as Error;
+
+    if (err.message === 'Stavka ne postoji') {
+      return NextResponse.json({ error: 'Stavka ne postoji' }, { status: 404 });
+    }
+
+    return NextResponse.json(
+      { error: 'Greška pri ažuriranju stavke' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

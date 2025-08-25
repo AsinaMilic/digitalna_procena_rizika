@@ -19,7 +19,8 @@ export function useRiskAssessmentData(
     procenaId: string,
     riskGroupData: RiskGroupData,
     onSelectionChange?: (selections: RiskSelection[]) => void,
-    onPrilogMUpdate?: (prilogMData: PrilogMData[]) => void
+    onPrilogMUpdate?: (prilogMData: PrilogMData[]) => void,
+    allPrilogMData?: Map<string, PrilogMData[]> // Dodaj prosleđene podatke
 ) {
     const [selections, setSelections] = useState<Map<string, RiskSelection>>(new Map());
     const [prilogMData, setPrilogMData] = useState<Map<string, PrilogMData>>(new Map());
@@ -33,11 +34,9 @@ export function useRiskAssessmentData(
             const finResponse = await fetch(`/api/procena/${procenaId}/financial-data`);
             if (finResponse.ok) {
                 const finData = await finResponse.json();
-                console.log('🔍 useRiskAssessmentData - loaded financial data:', finData);
                 const hasValid = finData.poslovniPrihodi > 0 && finData.vrednostImovine > 0;
                 setHasValidFinancialData(hasValid);
                 setCurrentFinancialData(finData);
-                console.log('🔍 useRiskAssessmentData - set currentFinancialData:', finData);
                 return hasValid;
             }
         } catch (error) {
@@ -81,26 +80,40 @@ export function useRiskAssessmentData(
                     }
                 }
 
-                // Load Prilog M data
-                const prilogMResponse = await fetch(`/api/procena/${procenaId}/prilog-m`);
-                if (prilogMResponse.ok) {
-                    const prilogMData = await prilogMResponse.json();
+                // Load Prilog M data - koristi prosleđene podatke ili učitaj iz API-ja
+                if (allPrilogMData) {
+                    // Koristi prosleđene podatke
                     const prilogMMap = new Map<string, PrilogMData>();
+                    
+                    // Konvertuj iz Map<string, PrilogMData[]> u Map<string, PrilogMData>
+                    allPrilogMData.forEach((groupData) => {
+                        groupData.forEach(item => {
+                            prilogMMap.set(item.id, item);
+                        });
+                    });
 
-                    console.log('🔍 useRiskAssessmentData - loaded Prilog M data:', prilogMData.length);
-                    console.log('🔍 useRiskAssessmentData - looking for group:', riskGroupData.id);
 
-                    prilogMData
-                        .filter((item: unknown) => {
-                            const dbItem = item as {
-                                groupid?: string;
-                                groupId?: string;
-                            };
-                            const groupId = dbItem.groupid || dbItem.groupId;
-                            console.log('🔍 Item groupId:', groupId, 'vs expected:', riskGroupData.id);
-                            return groupId === riskGroupData.id;
-                        })
-                        .forEach((item: unknown) => {
+
+                    setPrilogMData(prilogMMap);
+
+                    // Za callback, pošalji samo podatke trenutne grupe
+                    if (onPrilogMUpdate) {
+                        const currentGroupData = Array.from(prilogMMap.values()).filter(item => 
+                            item.groupId === riskGroupData.id
+                        );
+                        onPrilogMUpdate(currentGroupData);
+                    }
+                } else {
+                    // Učitaj iz API-ja kao fallback
+                    const prilogMResponse = await fetch(`/api/procena/${procenaId}/prilog-m`);
+                    if (prilogMResponse.ok) {
+                        const prilogMData = await prilogMResponse.json();
+                        const prilogMMap = new Map<string, PrilogMData>();
+
+
+
+                        // Učitaj SVE podatke, ne filtriraj po grupi
+                        prilogMData.forEach((item: unknown) => {
                             const dbItem = item as {
                                 id: string;
                                 groupid?: string;
@@ -139,12 +152,17 @@ export function useRiskAssessmentData(
                             prilogMMap.set(mappedItem.id, mappedItem);
                         });
 
-                    console.log('🔍 useRiskAssessmentData - filtered data for group:', prilogMMap.size);
 
-                    setPrilogMData(prilogMMap);
 
-                    if (onPrilogMUpdate) {
-                        onPrilogMUpdate(Array.from(prilogMMap.values()));
+                        setPrilogMData(prilogMMap);
+
+                        // Za callback, pošalji samo podatke trenutne grupe
+                        if (onPrilogMUpdate) {
+                            const currentGroupData = Array.from(prilogMMap.values()).filter(item => 
+                                item.groupId === riskGroupData.id
+                            );
+                            onPrilogMUpdate(currentGroupData);
+                        }
                     }
                 }
 
@@ -158,15 +176,13 @@ export function useRiskAssessmentData(
         if (procenaId && riskGroupData) {
             loadExistingData();
         }
-    }, [procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate, loadFinancialData]);
+    }, [procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate, loadFinancialData, allPrilogMData]);
 
     // Listen for financial data saved events
     useEffect(() => {
         const handleFinancialDataSaved = async (event: Event) => {
             const customEvent = event as CustomEvent;
-            console.log('🔍 useRiskAssessmentData - received financial data saved event:', customEvent.detail);
             if (customEvent.detail.procenaId === procenaId) {
-                console.log('🔍 useRiskAssessmentData - refreshing financial data after save');
                 await loadFinancialData();
             }
         };
