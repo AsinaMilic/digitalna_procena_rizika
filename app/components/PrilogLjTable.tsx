@@ -6,9 +6,10 @@ interface PrilogLjTableProps {
     prilogMData: Map<string, PrilogMData>;
     procenaId: string;
     onUpdateOpis?: (itemId: string, opis: string) => void;
+    readOnly?: boolean;
 }
 
-export default function PrilogLjTable({ prilogMData, procenaId, onUpdateOpis }: PrilogLjTableProps) {
+export default function PrilogLjTable({ prilogMData, procenaId, onUpdateOpis, readOnly = false }: PrilogLjTableProps) {
     const [editingOpis, setEditingOpis] = useState<string | null>(null);
     const [editValue, setEditValue] = useState<string>('');
     const [localOpisData, setLocalOpisData] = useState<Map<string, string>>(new Map());
@@ -60,6 +61,8 @@ export default function PrilogLjTable({ prilogMData, procenaId, onUpdateOpis }: 
     }, [sectionGroups, procenaId]);
 
     const handleOpisClick = (itemId: string, currentOpis: string | null) => {
+        if (readOnly) return; // Disable editing in read-only mode
+        
         setEditingOpis(itemId);
         setEditValue(currentOpis || '');
     };
@@ -270,9 +273,9 @@ export default function PrilogLjTable({ prilogMData, procenaId, onUpdateOpis }: 
                                         />
                                     ) : (
                                         <div
-                                            className="min-h-[20px] cursor-pointer hover:bg-gray-50 p-1 rounded"
+                                            className={`min-h-[20px] p-1 rounded ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50'}`}
                                             onClick={() => handleOpisClick(item.id, localOpisData.get(item.id) || item.opisIdentifikovanihRizika || null)}
-                                            title="Кликните да унесете опис идентификованих ризика"
+                                            title={readOnly ? 'Режим прегледа - измене нису дозвољене' : 'Кликните да унесете опис идентификованих ризика'}
                                         >
                                             {localOpisData.get(item.id) || item.opisIdentifikovanihRizika || (
                                                 <span className="text-gray-400 italic">Кликните да унесете опис...</span>

@@ -7,9 +7,10 @@ interface PrilogMTableProps {
     prilogMData: Map<string, PrilogMData>;
     onShowDetails: (item: PrilogMData) => void;
     onUpdateItem?: (itemId: string, field: 'posledice' | 'steta', value: number) => void;
+    readOnly?: boolean;
 }
 
-export default function PrilogMTable({ prilogMData, onShowDetails, onUpdateItem }: PrilogMTableProps) {
+export default function PrilogMTable({ prilogMData, onShowDetails, onUpdateItem, readOnly = false }: PrilogMTableProps) {
     const [editingCell, setEditingCell] = useState<string | null>(null);
     const [editValue, setEditValue] = useState<string>('');
     const [showImageModal, setShowImageModal] = useState<string | null>(null);
@@ -33,6 +34,8 @@ export default function PrilogMTable({ prilogMData, onShowDetails, onUpdateItem 
     }
 
     const handleCellClick = (itemId: string, field: 'posledice' | 'steta', currentValue: number | null) => {
+        if (readOnly) return; // Disable editing in read-only mode
+        
         const cellKey = `${itemId}-${field}`;
         setEditingCell(cellKey);
         setEditValue(currentValue?.toString() || '');
@@ -258,13 +261,13 @@ export default function PrilogMTable({ prilogMData, onShowDetails, onUpdateItem 
                                             />
                                         ) : (
                                             <span
-                                                className={`inline-block w-6 h-6 rounded-full text-white font-bold text-xs leading-6 cursor-pointer hover:opacity-80 ${(item.posledice || 0) >= 4 ? 'bg-red-600' :
+                                                className={`inline-block w-6 h-6 rounded-full text-white font-bold text-xs leading-6 ${readOnly ? '' : 'cursor-pointer hover:opacity-80'} ${(item.posledice || 0) >= 4 ? 'bg-red-600' :
                                                     (item.posledice || 0) === 3 ? 'bg-yellow-600' :
                                                         (item.posledice || 0) === 2 ? 'bg-blue-600' :
                                                             'bg-green-600'
                                                     }`}
                                                 onClick={() => handleCellClick(item.id, 'posledice', item.posledice)}
-                                                title="Кликните да измените вредност (1-5)"
+                                                title={readOnly ? 'Режим прегледа - измене нису дозвољене' : 'Кликните да измените вредност (1-5)'}
                                             >
                                                 {item.posledice || 0}
                                             </span>
@@ -284,13 +287,13 @@ export default function PrilogMTable({ prilogMData, onShowDetails, onUpdateItem 
                                             />
                                         ) : (
                                             <span
-                                                className={`inline-block w-6 h-6 rounded-full text-white font-bold text-xs leading-6 cursor-pointer hover:opacity-80 ${(item.steta || 0) >= 4 ? 'bg-red-600' :
+                                                className={`inline-block w-6 h-6 rounded-full text-white font-bold text-xs leading-6 ${readOnly ? '' : 'cursor-pointer hover:opacity-80'} ${(item.steta || 0) >= 4 ? 'bg-red-600' :
                                                     (item.steta || 0) === 3 ? 'bg-yellow-600' :
                                                         (item.steta || 0) === 2 ? 'bg-blue-600' :
                                                             'bg-green-600'
                                                     }`}
                                                 onClick={() => handleCellClick(item.id, 'steta', item.steta)}
-                                                title="Кликните да измените вредност (1-5)"
+                                                title={readOnly ? 'Режим прегледа - измене нису дозвољене' : 'Кликните да измените вредност (1-5)'}
                                             >
                                                 {item.steta || 0}
                                             </span>

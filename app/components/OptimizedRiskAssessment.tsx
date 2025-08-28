@@ -21,9 +21,10 @@ interface OptimizedRiskAssessmentProps {
         pib: string;
         adresa: string;
     } | null;
+    readOnly?: boolean;
 }
 
-export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: OptimizedRiskAssessmentProps) {
+export default function OptimizedRiskAssessment({ procenaId, pravnoLice, readOnly = false }: OptimizedRiskAssessmentProps) {
     const [activeGroupId, setActiveGroupId] = useState<string>('group1');
     const [allSelections, setAllSelections] = useState<Map<string, RiskSelection[]>>(new Map());
     const [allPrilogMData, setAllPrilogMData] = useState<Map<string, PrilogMData[]>>(new Map());
@@ -350,12 +351,14 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                         </div>
 
                         <div className="flex gap-2">
-                            <button
-                                onClick={() => setShowFinancialForm(true)}
-                                className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
-                            >
-                                💰 Finansijski podaci
-                            </button>
+                            {!readOnly && (
+                                <button
+                                    onClick={() => setShowFinancialForm(true)}
+                                    className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
+                                >
+                                    💰 Finansijski podaci
+                                </button>
+                            )}
 
                             <button
                                 onClick={exportData}
@@ -556,6 +559,7 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                         onSelectionChange={activeGroupSelectionCallback}
                         onPrilogMUpdate={activeGroupPrilogMCallback}
                         onUnsavedChanges={setHasUnsavedChanges}
+                        readOnly={readOnly}
                     />
                 )}
 
@@ -584,37 +588,39 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice }: Optim
                                     📊 Izvezi Rezultate
                                 </button>
 
-                                <button
-                                    onClick={async () => {
-                                        try {
-                                            // Ažuriraj status procene na 'zavrsena'
-                                            const response = await fetch(`/api/procena/${procenaId}/status`, {
-                                                method: 'PUT',
-                                                headers: {
-                                                    'Content-Type': 'application/json',
-                                                },
-                                                body: JSON.stringify({ status: 'zavrsena' })
-                                            });
+                                {!readOnly && (
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                // Ažuriraj status procene na 'zavrsena'
+                                                const response = await fetch(`/api/procena/${procenaId}/status`, {
+                                                    method: 'PUT',
+                                                    headers: {
+                                                        'Content-Type': 'application/json',
+                                                    },
+                                                    body: JSON.stringify({ status: 'zavrsena' })
+                                                });
 
-                                            if (response.ok) {
-                                                console.log('✅ Status procene ažuriran na "zavrsena"');
-                                                window.location.href = '/';
-                                            } else {
-                                                console.error('❌ Greška pri ažuriranju statusa procene');
-                                                // I dalje preusmeri korisnika, ali prikaži upozorenje
+                                                if (response.ok) {
+                                                    console.log('✅ Status procene ažuriran na "zavrsena"');
+                                                    window.location.href = '/';
+                                                } else {
+                                                    console.error('❌ Greška pri ažuriranju statusa procene');
+                                                    // I dalje preusmeri korisnika, ali prikaži upozorenje
+                                                    alert('Procena je završena, ali status možda nije ažuriran. Kontaktirajte administratora.');
+                                                    window.location.href = '/';
+                                                }
+                                            } catch (error) {
+                                                console.error('❌ Greška pri komunikaciji sa serverom:', error);
                                                 alert('Procena je završena, ali status možda nije ažuriran. Kontaktirajte administratora.');
                                                 window.location.href = '/';
                                             }
-                                        } catch (error) {
-                                            console.error('❌ Greška pri komunikaciji sa serverom:', error);
-                                            alert('Procena je završena, ali status možda nije ažuriran. Kontaktirajte administratora.');
-                                            window.location.href = '/';
-                                        }
-                                    }}
-                                    className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
-                                >
-                                    ✅ Gotovo - Povratak na početnu
-                                </button>
+                                        }}
+                                        className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        ✅ Gotovo - Povratak na početnu
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>

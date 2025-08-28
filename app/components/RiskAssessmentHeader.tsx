@@ -6,6 +6,7 @@ interface RiskAssessmentHeaderProps {
     hasUnsavedChanges: boolean;
     saving: boolean;
     onSaveChanges: () => void;
+    readOnly?: boolean;
 }
 
 export default function RiskAssessmentHeader({
@@ -13,21 +14,29 @@ export default function RiskAssessmentHeader({
     groupDescription,
     hasUnsavedChanges,
     saving,
-    onSaveChanges
+    onSaveChanges,
+    readOnly = false
 }: RiskAssessmentHeaderProps) {
     return (
         <div className="flex justify-between items-center mb-6">
             <div className="flex-1">
                 <h2 className="text-2xl font-bold text-blue-800 text-center">
-                    Табела за процену ризика - {groupName}
+                    {readOnly ? '👁️ Преглед процене ризика' : 'Табела за процену ризика'} - {groupName}
                 </h2>
                 <p className="text-blue-600 text-center mt-2">
                     {groupDescription}
                 </p>
+                {readOnly && (
+                    <div className="text-center mt-2">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                            📖 Режим прегледа - измене нису дозвољене
+                        </span>
+                    </div>
+                )}
             </div>
 
-            {/* Dugme za čuvanje */}
-            {hasUnsavedChanges && (
+            {/* Dugme za čuvanje - sakrij u read-only režimu */}
+            {hasUnsavedChanges && !readOnly && (
                 <div className="ml-4">
                     <button
                         onClick={onSaveChanges}

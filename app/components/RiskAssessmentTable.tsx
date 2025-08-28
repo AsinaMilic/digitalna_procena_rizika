@@ -19,11 +19,12 @@ interface RiskAssessmentTableProps {
     onSelectionChange?: (selections: RiskSelection[]) => void;
     onPrilogMUpdate?: (prilogMData: PrilogMData[]) => void;
     onUnsavedChanges?: (hasUnsaved: boolean) => void;
+    readOnly?: boolean;
 }
 
 
 
-export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate, onUnsavedChanges }: RiskAssessmentTableProps) {
+export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelectionChange, onPrilogMUpdate, onUnsavedChanges, readOnly = false }: RiskAssessmentTableProps) {
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
     // Use custom hooks for data management
@@ -125,6 +126,7 @@ export default function RiskAssessmentTable({ procenaId, riskGroupData, onSelect
             onSaveChanges={handleSaveChanges}
             getCellClass={getCellClassWithSelections}
             onPrilogMUpdate={handlePrilogMItemUpdate}
+            readOnly={readOnly}
         />
     );
 }

@@ -127,7 +127,7 @@ export default function OptimizedRiskByIdPage() {
             </div>
 
             {/* Risk Assessment Component */}
-            <OptimizedRiskAssessment procenaId={procenaId} pravnoLice={pravnoLice} />
+            <OptimizedRiskAssessment procenaId={procenaId} pravnoLice={pravnoLice} readOnly={true} />
         </div>
     );
 }

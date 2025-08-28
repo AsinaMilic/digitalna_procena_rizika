@@ -11,9 +11,10 @@ interface TabelaF5Data {
 interface TabelaF5Props {
     procenaId: string;
     onUpdateItem?: (itemId: number, field: 'mera' | 'opisIObrazlozenje', value: string) => void;
+    readOnly?: boolean;
 }
 
-export default function TabelaF5({ procenaId, onUpdateItem }: TabelaF5Props) {
+export default function TabelaF5({ procenaId, onUpdateItem, readOnly = false }: TabelaF5Props) {
     const [editingCell, setEditingCell] = useState<string | null>(null);
     const [editValue, setEditValue] = useState<string>('');
     const [tabelaF5Data, setTabelaF5Data] = useState<Map<number, TabelaF5Data>>(new Map());
@@ -115,6 +116,8 @@ export default function TabelaF5({ procenaId, onUpdateItem }: TabelaF5Props) {
     }, [procenaId, defaultMere]);
 
     const handleCellClick = (itemId: number, field: 'mera' | 'opisIObrazlozenje', currentValue: string) => {
+        if (readOnly) return; // Disable editing in read-only mode
+        
         const cellKey = `${itemId}-${field}`;
         setEditingCell(cellKey);
         setEditValue(currentValue);
@@ -219,7 +222,7 @@ export default function TabelaF5({ procenaId, onUpdateItem }: TabelaF5Props) {
                                 {items.sort((a, b) => a.id - b.id).map((item) => (
                                     <tr key={item.id} className="hover:bg-gray-50">
                                         <td className="border border-gray-800 px-2 py-2 text-xs text-gray-800 align-top">
-                                            {editingCell === `${item.id}-mera` ? (
+                                            {editingCell === `${item.id}-mera` && !readOnly ? (
                                                 <textarea
                                                     value={editValue}
                                                     onChange={(e) => setEditValue(e.target.value)}
@@ -231,18 +234,18 @@ export default function TabelaF5({ procenaId, onUpdateItem }: TabelaF5Props) {
                                                 />
                                             ) : (
                                                 <div
-                                                    className="min-h-[40px] cursor-pointer hover:bg-gray-50 p-1 rounded"
+                                                    className={`min-h-[40px] p-1 rounded ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50'}`}
                                                     onClick={() => handleCellClick(item.id, 'mera', item.mera)}
-                                                    title="Кликните да унесете меру"
+                                                    title={readOnly ? 'Режим прегледа - измене нису дозвољене' : 'Кликните да унесете меру'}
                                                 >
                                                     {item.mera || (
-                                                        <span className="text-gray-400 italic">Кликните да унесете меру...</span>
+                                                        <span className="text-gray-400 italic">{readOnly ? 'Нема података' : 'Кликните да унесете меру...'}</span>
                                                     )}
                                                 </div>
                                             )}
                                         </td>
                                         <td className="border border-gray-800 px-2 py-2 text-xs text-gray-800 align-top">
-                                            {editingCell === `${item.id}-opisIObrazlozenje` ? (
+                                            {editingCell === `${item.id}-opisIObrazlozenje` && !readOnly ? (
                                                 <textarea
                                                     value={editValue}
                                                     onChange={(e) => setEditValue(e.target.value)}
@@ -254,12 +257,12 @@ export default function TabelaF5({ procenaId, onUpdateItem }: TabelaF5Props) {
                                                 />
                                             ) : (
                                                 <div
-                                                    className="min-h-[60px] cursor-pointer hover:bg-gray-50 p-1 rounded"
+                                                    className={`min-h-[60px] p-1 rounded ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50'}`}
                                                     onClick={() => handleCellClick(item.id, 'opisIObrazlozenje', item.opisIObrazlozenje)}
-                                                    title="Кликните да унесете опис и образложење"
+                                                    title={readOnly ? 'Режим прегледа - измене нису дозвољене' : 'Кликните да унесете опис и образложење'}
                                                 >
                                                     {item.opisIObrazlozenje || (
-                                                        <span className="text-gray-400 italic">Кликните да унесете опис и образложење...</span>
+                                                        <span className="text-gray-400 italic">{readOnly ? 'Нема података' : 'Кликните да унесете опис и образложење...'}</span>
                                                     )}
                                                 </div>
                                             )}

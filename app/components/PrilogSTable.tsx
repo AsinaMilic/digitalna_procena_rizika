@@ -11,9 +11,10 @@ interface PrilogSData {
 interface PrilogSTableProps {
     procenaId: string;
     onUpdateItem?: (itemId: number, vrednost: string) => void;
+    readOnly?: boolean;
 }
 
-export default function PrilogSTable({ procenaId, onUpdateItem }: PrilogSTableProps) {
+export default function PrilogSTable({ procenaId, onUpdateItem, readOnly = false }: PrilogSTableProps) {
     const [editingCell, setEditingCell] = useState<number | null>(null);
     const [editValue, setEditValue] = useState<string>('');
     const [prilogSData, setPrilogSData] = useState<Map<number, PrilogSData>>(new Map());
@@ -92,6 +93,8 @@ export default function PrilogSTable({ procenaId, onUpdateItem }: PrilogSTablePr
     }, [procenaId, karakteristike]);
 
     const handleCellClick = (itemId: number, currentValue: string) => {
+        if (readOnly) return; // Disable editing in read-only mode
+        
         setEditingCell(itemId);
         setEditValue(currentValue);
     };
@@ -191,7 +194,7 @@ export default function PrilogSTable({ procenaId, onUpdateItem }: PrilogSTablePr
                                     )}
                                 </td>
                                 <td className="border border-gray-800 px-2 py-2 text-xs text-gray-600">
-                                    {editingCell === item.id ? (
+                                    {editingCell === item.id && !readOnly ? (
                                         <textarea
                                             value={editValue}
                                             onChange={(e) => setEditValue(e.target.value)}
@@ -203,12 +206,12 @@ export default function PrilogSTable({ procenaId, onUpdateItem }: PrilogSTablePr
                                         />
                                     ) : (
                                         <div
-                                            className="min-h-[40px] cursor-pointer hover:bg-gray-50 p-1 rounded"
+                                            className={`min-h-[40px] p-1 rounded ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50'}`}
                                             onClick={() => handleCellClick(item.id, item.vrednost)}
-                                            title="Кликните да унесете вредност"
+                                            title={readOnly ? 'Режим прегледа - измене нису дозвољене' : 'Кликните да унесете вредност'}
                                         >
                                             {item.vrednost || (
-                                                <span className="text-gray-400 italic">Кликните да унесете...</span>
+                                                <span className="text-gray-400 italic">{readOnly ? 'Нема података' : 'Кликните да унесете...'}</span>
                                             )}
                                         </div>
                                     )}
@@ -233,7 +236,7 @@ export default function PrilogSTable({ procenaId, onUpdateItem }: PrilogSTablePr
                                     )}
                                 </td>
                                 <td className="border border-gray-800 px-2 py-2 text-xs text-gray-600">
-                                    {editingCell === item.id ? (
+                                    {editingCell === item.id && !readOnly ? (
                                         <textarea
                                             value={editValue}
                                             onChange={(e) => setEditValue(e.target.value)}
@@ -245,12 +248,12 @@ export default function PrilogSTable({ procenaId, onUpdateItem }: PrilogSTablePr
                                         />
                                     ) : (
                                         <div
-                                            className="min-h-[40px] cursor-pointer hover:bg-gray-50 p-1 rounded"
+                                            className={`min-h-[40px] p-1 rounded ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50'}`}
                                             onClick={() => handleCellClick(item.id, item.vrednost)}
-                                            title="Кликните да унесете вредност"
+                                            title={readOnly ? 'Режим прегледа - измене нису дозвољене' : 'Кликните да унесете вредност'}
                                         >
                                             {item.vrednost || (
-                                                <span className="text-gray-400 italic">Кликните да унесете...</span>
+                                                <span className="text-gray-400 italic">{readOnly ? 'Нема података' : 'Кликните да унесете...'}</span>
                                             )}
                                         </div>
                                     )}

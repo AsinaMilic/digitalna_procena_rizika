@@ -52,6 +52,7 @@ interface RiskAssessmentContentProps {
     onSaveChanges: () => Promise<void>;
     getCellClass: (riskId: string, level: number, hasContent: boolean) => string;
     onPrilogMUpdate?: (itemId: string, field: 'posledice' | 'steta' | 'opisIdentifikovanihRizika', value: number | string) => void;
+    readOnly?: boolean;
 }
 
 export default function RiskAssessmentContent({
@@ -72,13 +73,16 @@ export default function RiskAssessmentContent({
     onParametersSet,
     onSaveChanges,
     getCellClass,
-    onPrilogMUpdate
+    onPrilogMUpdate,
+    readOnly = false
 }: RiskAssessmentContentProps) {
     const [selectedItemForDetails, setSelectedItemForDetails] = useState<PrilogMData | null>(null);
     const [showParametersForm, setShowParametersForm] = useState(false);
     const [showFinancialForm, setShowFinancialForm] = useState(false);
 
     const handleCellClick = async (riskId: string, dangerLevel: number, description: string) => {
+        if (readOnly) return; // Disable cell clicks in read-only mode
+        
         const result = await onCellClick(riskId, dangerLevel, description);
         if (result?.showParametersForm) {
             setShowParametersForm(true);
@@ -99,6 +103,7 @@ export default function RiskAssessmentContent({
                 hasUnsavedChanges={hasUnsavedChanges}
                 saving={saving}
                 onSaveChanges={onSaveChanges}
+                readOnly={readOnly}
             />
 
             <RiskAssessmentStatusMessages
@@ -108,7 +113,7 @@ export default function RiskAssessmentContent({
             />
 
             {/* Financial data warning */}
-            {!hasValidFinancialData && (
+            {!hasValidFinancialData && !readOnly && (
                 <FinancialDataWarning onOpenForm={() => {
                     // Jednostavno otvori form bez dodatnih API poziva
                     setShowFinancialForm(true);
@@ -185,7 +190,8 @@ export default function RiskAssessmentContent({
                         <PrilogMTable
                             prilogMData={prilogMData}
                             onShowDetails={setSelectedItemForDetails}
-                            onUpdateItem={async (itemId: string, field: 'posledice' | 'steta', value: number) => {
+                            readOnly={readOnly}
+                            onUpdateItem={readOnly ? undefined : async (itemId: string, field: 'posledice' | 'steta', value: number) => {
                                 try {
                                     const response = await fetch(`/api/procena/${procenaId}/prilog-m?itemId=${itemId}`, {
                                         method: 'PATCH',
@@ -220,7 +226,8 @@ export default function RiskAssessmentContent({
                         <PrilogLjTable 
                             prilogMData={prilogMData}
                             procenaId={procenaId}
-                            onUpdateOpis={async (sectionId: string, opis: string) => {
+                            readOnly={readOnly}
+                            onUpdateOpis={readOnly ? undefined : async (sectionId: string, opis: string) => {
                                 try {
                                     const response = await fetch(`/api/procena/${procenaId}/prilog-lj?sectionId=${sectionId}`, {
                                         method: 'PATCH',
@@ -248,7 +255,8 @@ export default function RiskAssessmentContent({
                     {/* Prilog S table - prikaži uvek */}
                     <PrilogSTable 
                         procenaId={procenaId}
-                        onUpdateItem={async (itemId: number, vrednost: string) => {
+                        readOnly={readOnly}
+                        onUpdateItem={readOnly ? undefined : async (itemId: number, vrednost: string) => {
                             console.log(`✅ Updated Prilog S item ${itemId} with value: ${vrednost}`);
                         }}
                     />
@@ -256,7 +264,8 @@ export default function RiskAssessmentContent({
                     {/* Tabela F.5 - Mere za postupanje sa rizicima */}
                     <TabelaF5 
                         procenaId={procenaId}
-                        onUpdateItem={async (itemId: number, field: 'mera' | 'opisIObrazlozenje', value: string) => {
+                        readOnly={readOnly}
+                        onUpdateItem={readOnly ? undefined : async (itemId: number, field: 'mera' | 'opisIObrazlozenje', value: string) => {
                             console.log(`✅ Updated Tabela F.5 item ${itemId} field ${field} with value: ${value}`);
                         }}
                     />
@@ -283,7 +292,7 @@ export default function RiskAssessmentContent({
                 />
             )}
 
-            {showFinancialForm && (
+            {showFinancialForm && !readOnly && (
                 <FinancialDataForm
                     procenaId={procenaId}
                     initialData={currentFinancialData || undefined}

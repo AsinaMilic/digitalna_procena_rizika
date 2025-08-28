@@ -38,8 +38,6 @@ export async function POST(
             WHERE procena_id = $1 AND item_id = $2
         `, [procenaId, itemId]);
 
-        const columnName = field === 'mera' ? 'mera' : 'opis_i_obrazlozenje';
-
         if (existingResult.rows.length > 0) {
             // Ažuriraj postojeći zapis
             if (field === 'mera') {
