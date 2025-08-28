@@ -7,9 +7,13 @@ interface ProcenaRizika {
     datum: string;
     status: string;
     pravnoLiceId: number;
-    naziv_usluge?: string;
+}
+
+interface Usluga {
+    id: number;
+    naziv_usluge: string;
     datum_izrade?: string;
-    rok_vazenja?: string;
+    opis?: string;
 }
 
 interface PravnoLice {
@@ -28,6 +32,7 @@ interface PravnoLice {
     telefon_faks?: string;
     internet_adresa?: string;
     procene: ProcenaRizika[];
+    usluge: Usluga[];
 }
 
 interface Korisnik {
@@ -43,9 +48,12 @@ export default function PravnaLicaPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [korisnik, setKorisnik] = useState<Korisnik | null>(null);
-    const [editingProcena, setEditingProcena] = useState<number | null>(null);
+    // const [editingProcena, setEditingProcena] = useState<number | null>(null);
+    const [editingPravnoLice, setEditingPravnoLice] = useState<number | null>(null);
+    const [editingUsluga, setEditingUsluga] = useState<number | null>(null);
     const [nazivUsluge, setNazivUsluge] = useState('');
     const [datumIzrade, setDatumIzrade] = useState('');
+    const [opisUsluge, setOpisUsluge] = useState('');
     const router = useRouter();
 
     useEffect(() => {
@@ -146,7 +154,7 @@ export default function PravnaLicaPage() {
         }
     };
 
-    const handleUpdateProcena = async (procenaId: number) => {
+    const handleAddUsluga = async (pravnoLiceId: number) => {
         if (!nazivUsluge.trim()) {
             setError('Naziv usluge je obavezan');
             return;
@@ -154,47 +162,127 @@ export default function PravnaLicaPage() {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('/api/procena', {
+            const response = await fetch('/api/pravno-lice', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    procenaId,
+                    pravnoLiceId,
                     naziv_usluge: nazivUsluge,
-                    datum_izrade: datumIzrade || new Date().toISOString().split('T')[0]
+                    datum_izrade: datumIzrade || new Date().toISOString().split('T')[0],
+                    opis: opisUsluge
                 })
             });
 
             if (response.ok) {
-                // Osvezi podatke nakon ažuriranja
                 await fetchPravnaLica();
-                setEditingProcena(null);
+                setEditingPravnoLice(null);
                 setNazivUsluge('');
                 setDatumIzrade('');
+                setOpisUsluge('');
                 setError(null);
             } else {
                 const errorData = await response.json();
-                setError(errorData.error || 'Greška pri ažuriranju procene');
+                setError(errorData.error || 'Greška pri dodavanju usluge');
             }
         } catch (error) {
             console.error('Greška:', error);
-            setError('Greška pri ažuriranju procene');
+            setError('Greška pri dodavanju usluge');
         }
     };
 
-    const startEditingProcena = (procena: ProcenaRizika) => {
-        setEditingProcena(procena.id);
-        setNazivUsluge(procena.naziv_usluge || '');
-        setDatumIzrade(procena.datum_izrade || new Date().toISOString().split('T')[0]);
+    const handleUpdateUsluga = async (uslugaId: number) => {
+        if (!nazivUsluge.trim()) {
+            setError('Naziv usluge je obavezan');
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/usluge', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    id: uslugaId,
+                    naziv_usluge: nazivUsluge,
+                    datum_izrade: datumIzrade,
+                    opis: opisUsluge
+                })
+            });
+
+            if (response.ok) {
+                await fetchPravnaLica();
+                setEditingUsluga(null);
+                setNazivUsluge('');
+                setDatumIzrade('');
+                setOpisUsluge('');
+                setError(null);
+            } else {
+                const errorData = await response.json();
+                setError(errorData.error || 'Greška pri ažuriranju usluge');
+            }
+        } catch (error) {
+            console.error('Greška:', error);
+            setError('Greška pri ažuriranju usluge');
+        }
+    };
+
+    const handleDeleteUsluga = async (uslugaId: number, nazivUsluge: string) => {
+        if (!confirm(`Da li ste sigurni da želite da obrišete uslugu "${nazivUsluge}"?`)) {
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/usluge?id=${uslugaId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                await fetchPravnaLica();
+                setError(null);
+            } else {
+                const errorData = await response.json();
+                setError(errorData.error || 'Greška pri brisanju usluge');
+            }
+        } catch (error) {
+            console.error('Greška:', error);
+            setError('Greška pri brisanju usluge');
+        }
+    };
+
+    const startAddingUsluga = (pravnoLiceId: number) => {
+        setEditingPravnoLice(pravnoLiceId);
+        setNazivUsluge('');
+        setDatumIzrade(new Date().toISOString().split('T')[0]);
+        setOpisUsluge('');
+    };
+
+    const startEditingUsluga = (usluga: Usluga) => {
+        setEditingUsluga(usluga.id);
+        setNazivUsluge(usluga.naziv_usluge);
+        setDatumIzrade(usluga.datum_izrade || new Date().toISOString().split('T')[0]);
+        setOpisUsluge(usluga.opis || '');
     };
 
     const cancelEditing = () => {
-        setEditingProcena(null);
+        setEditingPravnoLice(null);
+        setEditingUsluga(null);
         setNazivUsluge('');
         setDatumIzrade('');
+        setOpisUsluge('');
+        setError(null);
     };
+
+
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -426,6 +514,135 @@ export default function PravnaLicaPage() {
                                             </div>
                                         </div>
 
+                                        {/* Sekcija za naziv usluge i datum izrade */}
+                                        {/* Sekcija za usluge */}
+                                        <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <h4 className="text-lg font-semibold text-blue-900">📋 Usluge ({pravnoLice.usluge?.length || 0})</h4>
+                                                <button
+                                                    onClick={() => startAddingUsluga(pravnoLice.id)}
+                                                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
+                                                >
+                                                    + Dodaj uslugu
+                                                </button>
+                                            </div>
+
+                                            {/* Forma za dodavanje/editovanje usluge */}
+                                            {(editingPravnoLice === pravnoLice.id || editingUsluga) && (
+                                                <div className="mb-4 p-3 bg-white rounded-lg border border-blue-300">
+                                                    <h5 className="text-sm font-medium text-gray-900 mb-3">
+                                                        {editingUsluga ? 'Uredi uslugu' : 'Dodaj novu uslugu'}
+                                                    </h5>
+                                                    <div className="space-y-3">
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                                Naziv usluge *
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                value={nazivUsluge}
+                                                                onChange={(e) => setNazivUsluge(e.target.value)}
+                                                                placeholder="Unesite naziv usluge..."
+                                                                className="w-full px-3 py-2 text-sm text-black placeholder-gray-500 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium"
+                                                            />
+                                                        </div>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                                    Datum izrade
+                                                                </label>
+                                                                <input
+                                                                    type="date"
+                                                                    value={datumIzrade}
+                                                                    onChange={(e) => setDatumIzrade(e.target.value)}
+                                                                    className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                                    Opis (opciono)
+                                                                </label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={opisUsluge}
+                                                                    onChange={(e) => setOpisUsluge(e.target.value)}
+                                                                    placeholder="Kratak opis usluge..."
+                                                                    className="w-full px-3 py-2 text-sm text-black placeholder-gray-500 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex space-x-2">
+                                                            <button
+                                                                onClick={() => editingUsluga ? handleUpdateUsluga(editingUsluga) : handleAddUsluga(pravnoLice.id)}
+                                                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors"
+                                                            >
+                                                                {editingUsluga ? 'Ažuriraj' : 'Dodaj'}
+                                                            </button>
+                                                            <button
+                                                                onClick={cancelEditing}
+                                                                className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded-md transition-colors"
+                                                            >
+                                                                Otkaži
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Lista usluga */}
+                                            <div className="space-y-2">
+                                                {!pravnoLice.usluge || pravnoLice.usluge.length === 0 ? (
+                                                    <div className="text-center py-4 text-gray-500 text-sm">
+                                                        Nema dodanih usluga
+                                                    </div>
+                                                ) : (
+                                                    pravnoLice.usluge.map((usluga) => (
+                                                        <div key={usluga.id} className="p-3 bg-white rounded-lg border border-blue-200">
+                                                            <div className="flex items-start justify-between">
+                                                                <div className="flex-1">
+                                                                    <div className="text-base font-medium text-gray-900 mb-1">
+                                                                        {usluga.naziv_usluge}
+                                                                    </div>
+                                                                    <div className="flex items-center space-x-4 text-sm text-gray-600">
+                                                                        {usluga.datum_izrade && (
+                                                                            <span>
+                                                                                📅 {new Date(usluga.datum_izrade).toLocaleDateString('sr-RS')}
+                                                                            </span>
+                                                                        )}
+                                                                        {usluga.opis && (
+                                                                            <span className="text-gray-500">
+                                                                                {usluga.opis}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex items-center space-x-1">
+                                                                    <button
+                                                                        onClick={() => startEditingUsluga(usluga)}
+                                                                        className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
+                                                                        title="Uredi uslugu"
+                                                                    >
+                                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                                        </svg>
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDeleteUsluga(usluga.id, usluga.naziv_usluge)}
+                                                                        className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded transition-colors"
+                                                                        title="Obriši uslugu"
+                                                                    >
+                                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                        </svg>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+
                                         <div className="flex items-center justify-end space-x-2 mb-4">
                                             {(() => {
                                                 const aktivnaProcena = pravnoLice.procene.find(p => p.status === 'u_toku');
@@ -537,97 +754,7 @@ export default function PravnaLicaPage() {
                                                                 </div>
                                                             </div>
 
-                                                            {/* Sekcija za naziv usluge i datum izrade */}
-                                                            {editingProcena === procena.id ? (
-                                                                <div className="mt-3 p-3 bg-white rounded-lg border border-gray-200">
-                                                                    <h5 className="text-sm font-medium text-gray-900 mb-3">Dodaj informacije o usluzi</h5>
-                                                                    <div className="space-y-3">
-                                                                        <div>
-                                                                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                                                                Naziv usluge *
-                                                                            </label>
-                                                                            <input
-                                                                                type="text"
-                                                                                value={nazivUsluge}
-                                                                                onChange={(e) => setNazivUsluge(e.target.value)}
-                                                                                placeholder="Unesite šta je urađeno..."
-                                                                                className="w-full px-3 py-2 text-sm text-black placeholder-gray-500 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium"
-                                                                            />
-                                                                        </div>
-                                                                        <div>
-                                                                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                                                                Datum izrade
-                                                                            </label>
-                                                                            <input
-                                                                                type="date"
-                                                                                value={datumIzrade}
-                                                                                onChange={(e) => setDatumIzrade(e.target.value)}
-                                                                                className="w-full px-3 py-2 text-sm text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium"
-                                                                            />
-                                                                        </div>
-                                                                        <div className="flex space-x-2">
-                                                                            <button
-                                                                                onClick={() => handleUpdateProcena(procena.id)}
-                                                                                className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors"
-                                                                            >
-                                                                                Sačuvaj
-                                                                            </button>
-                                                                            <button
-                                                                                onClick={cancelEditing}
-                                                                                className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded-md transition-colors"
-                                                                            >
-                                                                                Otkaži
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="mt-3 space-y-2">
-                                                                    {procena.naziv_usluge ? (
-                                                                        <div className="flex items-start justify-between">
-                                                                            <div className="flex-1">
-                                                                                <div className="text-xs text-gray-600 mb-1">Naziv usluge:</div>
-                                                                                <div className="text-sm font-medium text-gray-900">{procena.naziv_usluge}</div>
 
-                                                                                {procena.datum_izrade && (
-                                                                                    <div className="mt-2 grid grid-cols-2 gap-4 text-xs">
-                                                                                        <div>
-                                                                                            <span className="text-gray-600">Datum izrade:</span>
-                                                                                            <div className="font-medium text-gray-900">
-                                                                                                {new Date(procena.datum_izrade).toLocaleDateString('sr-RS')}
-                                                                                            </div>
-                                                                                        </div>
-                                                                                        {procena.rok_vazenja && (
-                                                                                            <div>
-                                                                                                <span className="text-gray-600">Rok važenja:</span>
-                                                                                                <div className="font-medium text-gray-900">
-                                                                                                    {new Date(procena.rok_vazenja).toLocaleDateString('sr-RS')}
-                                                                                                </div>
-                                                                                            </div>
-                                                                                        )}
-                                                                                    </div>
-                                                                                )}
-                                                                            </div>
-                                                                            <button
-                                                                                onClick={() => startEditingProcena(procena)}
-                                                                                className="ml-2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                                                                                title="Uredi informacije"
-                                                                            >
-                                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                                                </svg>
-                                                                            </button>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <button
-                                                                            onClick={() => startEditingProcena(procena)}
-                                                                            className="w-full text-left px-3 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors border-2 border-dashed border-gray-300"
-                                                                        >
-                                                                            + Dodaj naziv usluge i datum izrade
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>

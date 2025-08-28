@@ -128,6 +128,19 @@ export async function initializeDatabase() {
       )
     `);
 
+    // Kreiranje tabele Usluge
+    await pool.query(`
+      CREATE TABLE Usluge (
+        id SERIAL PRIMARY KEY,
+        pravnoLiceId INTEGER NOT NULL REFERENCES PravnoLice(id) ON DELETE CASCADE,
+        naziv_usluge TEXT NOT NULL,
+        datum_izrade DATE,
+        opis TEXT,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Kreiranje tabele ProcenaRizika
     await pool.query(`
       CREATE TABLE ProcenaRizika (
@@ -137,8 +150,6 @@ export async function initializeDatabase() {
         korisnikId INTEGER,
         pravnoLiceId INTEGER,
         status VARCHAR(50) DEFAULT 'u_toku',
-        naziv_usluge TEXT,
-        datum_izrade DATE,
         createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (korisnikId) REFERENCES korisnici(id),

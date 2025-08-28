@@ -16,10 +16,10 @@ interface ProcenaData {
 }
 
 interface ProcenaHistoryTableProps {
-    onEditProcena?: (procenaId: number) => void;
+    className?: string; // Props can be added here if needed in the future
 }
 
-export default function ProcenaHistoryTable({ onEditProcena }: ProcenaHistoryTableProps) {
+export default function ProcenaHistoryTable({}: ProcenaHistoryTableProps) {
     const [procene, setProocene] = useState<ProcenaData[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -436,14 +436,12 @@ export default function ProcenaHistoryTable({ onEditProcena }: ProcenaHistoryTab
                                         >
                                             Прегледај
                                         </Link>
-                                        {onEditProcena && (
-                                            <button
-                                                onClick={() => onEditProcena(procena.id)}
-                                                className="text-green-600 hover:text-green-900 bg-green-50 hover:bg-green-100 px-3 py-1 rounded-lg transition-colors"
-                                            >
-                                                Уреди
-                                            </button>
-                                        )}
+                                        <Link
+                                            href={`/optimized-risk/${procena.id}?edit=true`}
+                                            className="text-green-600 hover:text-green-900 bg-green-50 hover:bg-green-100 px-3 py-1 rounded-lg transition-colors"
+                                        >
+                                            Уреди
+                                        </Link>
 
                                         <button
                                             onClick={() => handleDeleteProcena(procena.id, procena.naziv)}

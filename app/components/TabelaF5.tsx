@@ -55,15 +55,14 @@ export default function TabelaF5({ procenaId, onUpdateItem, readOnly = false }: 
         
         // RIZICI PO ŽIVOTNU SREDINU
         { id: 17, grupa: 'РИЗИЦИ ПО ЖИВОТНУ СРЕДИНУ', mera: '', opisIObrazlozenje: '' },
-        { id: 18, grupa: 'РИЗИЦИ ПО ŽIVOTНУ СРЕДИНУ', mera: '', opisIObrazlozenje: '' },
         
         // RIZICI U UPRAVLJANJU LJUDSKIM RESURSIMA
+        { id: 18, grupa: 'РИЗИЦИ У УПРАВЉАЊУ ЉУДСКИМ РЕСУРСИМА', mera: '', opisIObrazlozenje: '' },
         { id: 19, grupa: 'РИЗИЦИ У УПРАВЉАЊУ ЉУДСКИМ РЕСУРСИМА', mera: '', opisIObrazlozenje: '' },
-        { id: 20, grupa: 'РИЗИЦИ У УПРАВЉАЊУ ЉУДСКИМ РЕСУРСИМА', mera: '', opisIObrazlozenje: '' },
         
         // RIZICI U OBLASTI IKT SISTEMA
-        { id: 21, grupa: 'РИЗИЦИ У ОБЛАСТИ ИКТ СИСТЕМА', mera: '', opisIObrazlozenje: '' },
-        { id: 22, grupa: 'РИЗИЦИ У ОБЛАСТИ ИКТ СИСТЕМА', mera: '', opisIObrazlozenje: '' }
+        { id: 20, grupa: 'РИЗИЦИ У ОБЛАСТИ ИКТ СИСТЕМА', mera: '', opisIObrazlozenje: '' },
+        { id: 21, grupa: 'РИЗИЦИ У ОБЛАСТИ ИКТ СИСТЕМА', mera: '', opisIObrazlozenje: '' }
     ], []);
 
     // Učitaj podatke iz baze

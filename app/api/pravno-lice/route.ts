@@ -145,16 +145,14 @@ export async function GET() {
                 pr.id as procenaId,
                 pr.createdAt as datum,
                 pr.status,
-                pr.naziv_usluge,
-                pr.datum_izrade,
-                CASE 
-                    WHEN pr.datum_izrade IS NOT NULL 
-                    THEN pr.datum_izrade + INTERVAL '3 years'
-                    ELSE NULL 
-                END as rok_vazenja
+                u.id as uslugaId,
+                u.naziv_usluge,
+                u.datum_izrade,
+                u.opis as usluga_opis
             FROM PravnoLice pl
             LEFT JOIN ProcenaRizika pr ON pl.id = pr.pravnoLiceId
-            ORDER BY pl.id, pr.createdAt DESC
+            LEFT JOIN Usluge u ON pl.id = u.pravnoLiceId
+            ORDER BY pl.id, pr.createdAt DESC, u.createdAt DESC
         `);
 
         // Group the results by pravno lice
@@ -179,19 +177,30 @@ export async function GET() {
                     telefon_faks: row.telefon_faks,
                     internet_adresa: row.internet_adresa,
                     email: row.email,
-                    procene: []
+                    procene: [],
+                    usluge: []
                 });
             }
             
-            if (row.procenaid) { // PostgreSQL vraća lowercase nazive kolona
-                pravnaLicaMap.get(row.id).procene.push({
+            const pravnoLice = pravnaLicaMap.get(row.id);
+            
+            // Dodaj procenu ako postoji i nije već dodana
+            if (row.procenaid && !pravnoLice.procene.find((p: { id: number }) => p.id === row.procenaid)) {
+                pravnoLice.procene.push({
                     id: row.procenaid,
                     datum: row.datum,
                     status: row.status,
-                    pravnoLiceId: row.id,
+                    pravnoLiceId: row.id
+                });
+            }
+            
+            // Dodaj uslugu ako postoji i nije već dodana
+            if (row.uslugaid && !pravnoLice.usluge.find((u: { id: number }) => u.id === row.uslugaid)) {
+                pravnoLice.usluge.push({
+                    id: row.uslugaid,
                     naziv_usluge: row.naziv_usluge,
                     datum_izrade: row.datum_izrade,
-                    rok_vazenja: row.rok_vazenja
+                    opis: row.usluga_opis
                 });
             }
         });
@@ -201,6 +210,34 @@ export async function GET() {
     } catch (error) {
         console.error("Greška pri dohvatanju pravnih lica:", error);
         return NextResponse.json({error: "Greška pri dohvatanju podataka"}, {status: 500});
+    }
+}
+
+export async function PUT(req: Request) {
+    try {
+        const { pravnoLiceId, naziv_usluge, datum_izrade, opis } = await req.json();
+        
+        if (!pravnoLiceId || !naziv_usluge) {
+            return NextResponse.json({error: "ID pravnog lica i naziv usluge su obavezni"}, {status: 400});
+        }
+
+        const pool = await getDbConnection();
+
+        // Dodaj novu uslugu
+        const result = await pool.query(`
+            INSERT INTO Usluge (pravnoLiceId, naziv_usluge, datum_izrade, opis)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id
+        `, [pravnoLiceId, naziv_usluge, datum_izrade || new Date().toISOString().split('T')[0], opis || null]);
+
+        return NextResponse.json({
+            success: true, 
+            message: "Usluga je uspešno dodana",
+            uslugaId: result.rows[0].id
+        });
+    } catch (error) {
+        console.error("Greška pri dodavanju usluge:", error);
+        return NextResponse.json({error: "Greška pri dodavanju usluge"}, {status: 500});
     }
 }
 

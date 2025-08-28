@@ -18,7 +18,7 @@ export async function POST() {
             success: true,
             message: 'Simple test risk assessment created',
             procenaId: procenaId,
-            testUrl: `http://localhost:3000/optimized-risk/${procenaId}`
+            testUrl: `/optimized-risk/${procenaId}`
         });
         
     } catch (error) {

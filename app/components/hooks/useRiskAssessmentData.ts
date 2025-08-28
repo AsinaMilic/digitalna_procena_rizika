@@ -156,7 +156,7 @@ export function useRiskAssessmentData(
         if (procenaId && riskGroupData.id) {
             loadExistingData();
         }
-    }, [procenaId, riskGroupData.id]); // Samo stabilni identifikatori
+    }, [procenaId, riskGroupData.id, loadFinancialData, onPrilogMUpdate, onSelectionChange]); // Dodao sve dependencies
 
     // Listen for financial data saved events - UKLANJAM OVO JER NIJE POTREBNO
     // useEffect(() => {

@@ -15,14 +15,14 @@ function startNextServer() {
   for (const nextPath of nextPaths) {
     try {
       const fullPath = path.resolve(nextPath);
-      
+
       // Check if the path exists (for local paths)
       if (nextPath.startsWith('./') && !fs.existsSync(fullPath)) {
         continue;
       }
-      
+
       console.log(`Attempting to start Next.js with: ${nextPath}`);
-      
+
       const nextProcess = spawn('node', [nextPath, 'start'], {
         stdio: 'inherit',
         env: {
@@ -31,28 +31,28 @@ function startNextServer() {
           HOSTNAME: process.env.HOSTNAME || '0.0.0.0'
         }
       });
-      
+
       nextProcess.on('error', (err) => {
         console.error(`Failed to start with ${nextPath}:`, err.message);
         // Try next path
       });
-      
+
       nextProcess.on('close', (code) => {
         if (code !== 0) {
           console.error(`Next.js process exited with code ${code}`);
         }
         process.exit(code);
       });
-      
+
       // If we get here, the process started successfully
       return;
-      
+
     } catch (error) {
       console.error(`Error with ${nextPath}:`, error.message);
       continue;
     }
   }
-  
+
   console.error('❌ Could not start Next.js server with any method');
   process.exit(1);
 }

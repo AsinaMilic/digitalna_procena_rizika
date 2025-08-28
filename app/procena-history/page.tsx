@@ -3,11 +3,6 @@ import ProcenaHistoryTable from "../components/ProcenaHistoryTable";
 import Link from "next/link";
 
 export default function ProcenaHistoryPage() {
-    const handleEditProcena = (procenaId: number) => {
-        // Redirect to edit page
-        window.location.href = `/optimized-risk/${procenaId}`;
-    };
-
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -69,7 +64,7 @@ export default function ProcenaHistoryPage() {
                 </div>
 
                 {/* Main Table */}
-                <ProcenaHistoryTable onEditProcena={handleEditProcena} />
+                <ProcenaHistoryTable />
                 
             </div>
         </div>
