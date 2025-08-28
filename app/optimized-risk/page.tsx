@@ -16,8 +16,8 @@ export default function OptimizedRiskPage() {
     const [pravnoLice, setPravnoLice] = useState<PravnoLice | null>(null);
     
     // Stilovi za input polja
-    const inputStyle = "w-full p-4 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 text-base";
-    const textareaStyle = "w-full p-4 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 resize-none text-base";
+    const inputStyle = "w-full p-4 border border-slate-300 rounded-xl text-black placeholder-slate-500 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 text-base font-medium";
+    const textareaStyle = "w-full p-4 border border-slate-300 rounded-xl text-black placeholder-slate-500 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 resize-none text-base font-medium";
     
     // Form state za pravno lice
     const [naziv, setNaziv] = useState('');
@@ -345,60 +345,26 @@ export default function OptimizedRiskPage() {
 
     // Korak 2: Optimizovana procena rizika
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-            {/* Header sa podacima o pravnom licu */}
-            <div className="bg-white shadow-sm border-b border-gray-200">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <h1 className="text-xl font-bold text-gray-800">
-                                    🚀 Optimizovana Procena Rizika
-                                </h1>
-                                {pravnoLice && (
-                                    <p className="text-sm text-gray-600">
-                                        {pravnoLice.naziv} | PIB: {pravnoLice.pib} | Procena ID: {procenaId}
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-                        
-                        <button
-                            onClick={() => {
-                                setStep('pravno-lice');
-                                setProcenaId('');
-                                setPravnoLice(null);
-                                setNaziv('');
-                                setSkracenoPoslovnoIme('');
-                                setPib('');
-                                setMaticniBroj('');
-                                setAdresaSediste('');
-                                setAdresaOstala('');
-                                setSifraDelatnosti('');
-                                setLiceZastupanje('');
-                                setLiceKomunikacija('');
-                                setTimProcenaRizika('');
-                                setTelefonFaks('');
-                                setInternetAdresa('');
-                            }}
-                            className="text-green-600 hover:text-green-800 font-medium flex items-center gap-2"
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                            </svg>
-                            Novo pravno lice
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Optimizovana procena rizika */}
-            <OptimizedRiskAssessment procenaId={procenaId} pravnoLice={pravnoLice} />
-        </div>
+        <OptimizedRiskAssessment 
+            procenaId={procenaId} 
+            pravnoLice={pravnoLice}
+            onNewAssessment={() => {
+                setStep('pravno-lice');
+                setProcenaId('');
+                setPravnoLice(null);
+                setNaziv('');
+                setSkracenoPoslovnoIme('');
+                setPib('');
+                setMaticniBroj('');
+                setAdresaSediste('');
+                setAdresaOstala('');
+                setSifraDelatnosti('');
+                setLiceZastupanje('');
+                setLiceKomunikacija('');
+                setTimProcenaRizika('');
+                setTelefonFaks('');
+                setInternetAdresa('');
+            }}
+        />
     );
 }

@@ -22,9 +22,10 @@ interface OptimizedRiskAssessmentProps {
         adresa: string;
     } | null;
     readOnly?: boolean;
+    onNewAssessment?: () => void;
 }
 
-export default function OptimizedRiskAssessment({ procenaId, pravnoLice, readOnly = false }: OptimizedRiskAssessmentProps) {
+export default function OptimizedRiskAssessment({ procenaId, pravnoLice, readOnly = false, onNewAssessment }: OptimizedRiskAssessmentProps) {
     const [activeGroupId, setActiveGroupId] = useState<string>('group1');
     const [allSelections, setAllSelections] = useState<Map<string, RiskSelection[]>>(new Map());
     const [allPrilogMData, setAllPrilogMData] = useState<Map<string, PrilogMData[]>>(new Map());
@@ -351,6 +352,18 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice, readOnl
                         </div>
 
                         <div className="flex gap-2">
+                            {onNewAssessment && (
+                                <button
+                                    onClick={onNewAssessment}
+                                    className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                    </svg>
+                                    Novo pravno lice
+                                </button>
+                            )}
+
                             {!readOnly && (
                                 <button
                                     onClick={() => setShowFinancialForm(true)}
@@ -464,7 +477,7 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice, readOnl
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {RISK_GROUPS.map((group) => {
                             const isActive = group.id === activeGroupId;
-                            
+
                             // Filtriraj stavke po grupi na osnovu ID-ja stavke umesto groupId iz baze
                             const groupData = getRiskGroupData(group.id);
                             const groupItemIds = new Set<string>();
@@ -475,7 +488,7 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice, readOnl
                                     });
                                 });
                             }
-                            
+
                             // Broji samo stavke koje pripadaju ovoj grupi na osnovu ID-ja
                             let completedItems = 0;
                             const currentGroupItems = allPrilogMData.get(group.id) || [];
