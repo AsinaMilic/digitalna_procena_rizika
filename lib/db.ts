@@ -241,6 +241,20 @@ export async function initializeDatabase() {
       )
     `);
 
+    // Kreiranje tabele TabelaF5 - mere za postupanje sa rizicima
+    await pool.query(`
+      CREATE TABLE tabela_f5 (
+        id SERIAL PRIMARY KEY,
+        procena_id INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
+        item_id INTEGER NOT NULL,
+        mera TEXT,
+        opis_i_obrazlozenje TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(procena_id, item_id)
+      )
+    `);
+
     // Kreiranje indeksa
     await pool.query(`
       CREATE INDEX idx_pravno_lice_maticni_broj ON PravnoLice(maticni_broj);

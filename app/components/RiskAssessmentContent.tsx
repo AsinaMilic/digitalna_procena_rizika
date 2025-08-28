@@ -9,6 +9,7 @@ import RiskAssessmentMainTable from "./RiskAssessmentMainTable";
 import PrilogMTable from "./PrilogMTable";
 import PrilogLjTable from "./PrilogLjTable";
 import PrilogSTable from "./PrilogSTable";
+import TabelaF5 from "./TabelaF5";
 import RiskParametersForm from "./RiskParametersForm";
 import FinancialDataWarning from "./FinancialDataWarning";
 import FinancialDataForm from "./FinancialDataForm";
@@ -249,6 +250,14 @@ export default function RiskAssessmentContent({
                         procenaId={procenaId}
                         onUpdateItem={async (itemId: number, vrednost: string) => {
                             console.log(`✅ Updated Prilog S item ${itemId} with value: ${vrednost}`);
+                        }}
+                    />
+
+                    {/* Tabela F.5 - Mere za postupanje sa rizicima */}
+                    <TabelaF5 
+                        procenaId={procenaId}
+                        onUpdateItem={async (itemId: number, field: 'mera' | 'opisIObrazlozenje', value: string) => {
+                            console.log(`✅ Updated Tabela F.5 item ${itemId} field ${field} with value: ${value}`);
                         }}
                     />
                 </div>
