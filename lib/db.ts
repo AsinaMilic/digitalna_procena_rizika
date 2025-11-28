@@ -239,6 +239,49 @@ export async function initializeDatabase() {
       )
     `);
 
+    // Kreiranje tabele PrilogMSections - za sekcijske podatke u Prilog M
+    await pool.query(`
+      CREATE TABLE PrilogMSections (
+        id SERIAL PRIMARY KEY,
+        procenaId INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
+        sectionNumber INTEGER NOT NULL,
+        sectionTitle VARCHAR(255) NOT NULL,
+        totalItems INTEGER DEFAULT 0,
+        completedItems INTEGER DEFAULT 0,
+        averageVO DECIMAL(3,2),
+        averageIzlozenost DECIMAL(3,2),
+        averageRanjivost DECIMAL(3,2),
+        averageVerovatnoca DECIMAL(3,2),
+        averagePosledice DECIMAL(3,2),
+        averageSteta DECIMAL(3,2),
+        averageKriticnost DECIMAL(3,2),
+        averageNivoRizika DECIMAL(5,2),
+        dominantnaKategorija INTEGER,
+        prihvatljivostStatus VARCHAR(50),
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(procenaId, sectionNumber)
+      )
+    `);
+
+    // Kreiranje tabele PrilogMSummary - za ukupne podatke na dnu Prilog M
+    await pool.query(`
+      CREATE TABLE PrilogMSummary (
+        id SERIAL PRIMARY KEY,
+        procenaId INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
+        ukupnoStavki INTEGER DEFAULT 0,
+        ukupnoZavrsenih INTEGER DEFAULT 0,
+        ukupanNivoRizika DECIMAL(5,2),
+        ukupnaKategorija INTEGER,
+        ukupnaPrihvatljivost VARCHAR(50),
+        procenatZavrsenosti DECIMAL(5,2),
+        preporuke TEXT,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(procenaId)
+      )
+    `);
+
     // Kreiranje tabele PrilogS - karakteristike identifikovanih rizika
     await pool.query(`
       CREATE TABLE prilog_s (
