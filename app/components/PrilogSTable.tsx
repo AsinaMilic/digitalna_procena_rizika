@@ -14,13 +14,27 @@ interface PrilogSTableProps {
     readOnly?: boolean;
 }
 
+const RISK_GROUPS: { [key: number]: string } = {
+    1: 'ОПШТИХ ПОСЛОВНИХ АКТИВНОСТИ',
+    2: 'ПО БЕЗБЕДНОСТ И ЗДРАВЉЕ НА РАДУ',
+    3: 'ПРАВНИ РИЗИЦИ',
+    4: 'ОД ПРОТИВПРАВНОГ ДЕЛОВАЊА',
+    5: 'ОД ПОЖАРА',
+    6: 'ОД ЕЛЕМЕНТАРНИХ НЕПОГОДА И ДРУГИХ НЕСРЕЋА',
+    7: 'ОД ЕКСПЛОЗИЈА',
+    8: 'ОД НЕУСАГЛАШЕНОСТИ СА СТАНДАРДИМА',
+    9: 'ПО ЖИВОТНУ СРЕДИНУ',
+    10: 'У УПРАВЉАЊУ ЉУДСКИМ РЕСУРСИМА',
+    11: 'У ОБЛАСТИ ИКТ СИСТЕМА'
+};
+
 export default function PrilogSTable({ procenaId, onUpdateItem, readOnly = false }: PrilogSTableProps) {
     const [editingCell, setEditingCell] = useState<number | null>(null);
     const [editValue, setEditValue] = useState<string>('');
     const [prilogSData, setPrilogSData] = useState<Map<number, PrilogSData>>(new Map());
 
-    // Definišemo sve karakteristike prema slici
-    const karakteristike: PrilogSData[] = useMemo(() => [
+    // Definišemo osnovne karakteristike (1-18)
+    const baseKarakteristike: PrilogSData[] = useMemo(() => [
         // Početno stanje - po izvršenoj proceni rizika (redovi 1-9)
         { id: 1, karakteristika: 'Време идентификације', vrednost: '', grupa: 'pocetno' },
         { id: 2, karakteristika: 'Штићени објекат', vrednost: '', grupa: 'pocetno' },
@@ -44,6 +58,21 @@ export default function PrilogSTable({ procenaId, onUpdateItem, readOnly = false
         { id: 18, karakteristika: 'Постојеће мере заштите за ову групу ризика', vrednost: '', grupa: 'zavrsno' }
     ], []);
 
+    // Generišemo proširenu listu za svih 11 grupa
+    const allKarakteristike = useMemo(() => {
+        const items: PrilogSData[] = [];
+        Object.keys(RISK_GROUPS).forEach((key) => {
+            const groupIndex = parseInt(key);
+            baseKarakteristike.forEach(k => {
+                items.push({
+                    ...k,
+                    id: groupIndex * 100 + k.id, // ID scheme: 101, 102... 1101...
+                });
+            });
+        });
+        return items;
+    }, [baseKarakteristike]);
+
     // Učitaj podatke iz baze
     useEffect(() => {
         async function loadPrilogSData() {
@@ -54,15 +83,16 @@ export default function PrilogSTable({ procenaId, onUpdateItem, readOnly = false
                     const dataMap = new Map<number, PrilogSData>();
 
                     // Prvo dodaj sve karakteristike sa default vrednostima
-                    karakteristike.forEach(k => {
+                    allKarakteristike.forEach(k => {
                         dataMap.set(k.id, { ...k });
                     });
 
                     // Zatim ažuriraj sa podacima iz baze
-                    data.forEach((item: { item_id: number; vrednost: string }) => {
-                        const existing = dataMap.get(item.item_id);
+                    data.forEach((item: { group_id: number; item_id: number; vrednost: string }) => {
+                        const compositeId = item.group_id * 100 + item.item_id;
+                        const existing = dataMap.get(compositeId);
                         if (existing) {
-                            dataMap.set(item.item_id, {
+                            dataMap.set(compositeId, {
                                 ...existing,
                                 vrednost: item.vrednost || ''
                             });
@@ -77,7 +107,7 @@ export default function PrilogSTable({ procenaId, onUpdateItem, readOnly = false
                 console.error('Greška pri učitavanju Prilog S podataka:', error);
                 // Ako nema podataka u bazi, koristi default karakteristike
                 const defaultMap = new Map<number, PrilogSData>();
-                karakteristike.forEach(k => defaultMap.set(k.id, k));
+                allKarakteristike.forEach(k => defaultMap.set(k.id, k));
                 setPrilogSData(defaultMap);
             }
         }
@@ -87,14 +117,14 @@ export default function PrilogSTable({ procenaId, onUpdateItem, readOnly = false
         } else {
             // Ako nema procenaId, učitaj default karakteristike
             const defaultMap = new Map<number, PrilogSData>();
-            karakteristike.forEach(k => defaultMap.set(k.id, k));
+            allKarakteristike.forEach(k => defaultMap.set(k.id, k));
             setPrilogSData(defaultMap);
         }
-    }, [procenaId, karakteristike]);
+    }, [procenaId, allKarakteristike]);
 
     const handleCellClick = (itemId: number, currentValue: string) => {
         if (readOnly) return; // Disable editing in read-only mode
-        
+
         setEditingCell(itemId);
         setEditValue(currentValue);
     };
@@ -115,6 +145,10 @@ export default function PrilogSTable({ procenaId, onUpdateItem, readOnly = false
             onUpdateItem(itemId, editValue);
         }
 
+        // Izračunaj groupId i originalItemId iz composite itemId
+        const groupId = Math.floor(itemId / 100);
+        const originalItemId = itemId % 100;
+
         // Sačuvaj u bazu
         try {
             await fetch(`/api/procena/${procenaId}/prilog-s`, {
@@ -123,7 +157,8 @@ export default function PrilogSTable({ procenaId, onUpdateItem, readOnly = false
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    itemId: itemId,
+                    groupId: groupId,
+                    itemId: originalItemId,
                     vrednost: editValue
                 }),
             });
@@ -144,8 +179,7 @@ export default function PrilogSTable({ procenaId, onUpdateItem, readOnly = false
         }
     };
 
-    const pocetnoStanje = Array.from(prilogSData.values()).filter(item => item.grupa === 'pocetno').sort((a, b) => a.id - b.id);
-    const zavrsnoStanje = Array.from(prilogSData.values()).filter(item => item.grupa === 'zavrsno').sort((a, b) => a.id - b.id);
+
 
     return (
         <div className="p-6 bg-white border-2 border-gray-800 rounded-lg mt-6">
@@ -156,113 +190,137 @@ export default function PrilogSTable({ procenaId, onUpdateItem, readOnly = false
                 <p className="text-xs text-gray-500 text-right">Образац SRPS A.L2.003/3</p>
             </div>
 
-            <div className="overflow-x-auto">
-                <table className="w-full border-collapse border-2 border-gray-800 text-xs">
-                    <thead>
-                        <tr className="bg-gray-200">
-                            <th className="border border-gray-800 px-2 py-2 text-center font-bold text-gray-800" style={{ width: '60px' }}>
-                                Р.<br />бр.
-                            </th>
-                            <th className="border border-gray-800 px-2 py-2 text-center font-bold text-gray-800" style={{ width: '300px' }}>
-                                Карактеристике идентификованог<br />ризика
-                            </th>
-                            <th className="border border-gray-800 px-2 py-2 text-center font-bold text-gray-800">
-                                ОПШТИХ ПОСЛОВНИХ<br />АКТИВНОСТИ
-                            </th>
-                        </tr>
-                        <tr className="bg-gray-100">
-                            <th className="border border-gray-800 px-1 py-1 text-center text-xs font-medium text-gray-600">1</th>
-                            <th className="border border-gray-800 px-1 py-1 text-center text-xs font-medium text-gray-600">2</th>
-                            <th className="border border-gray-800 px-1 py-1 text-center text-xs font-medium text-gray-600">3</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {/* Početno stanje */}
-                        {pocetnoStanje.map((item, index) => (
-                            <tr key={item.id} className="hover:bg-gray-50">
-                                <td className="border border-gray-800 px-2 py-2 text-center font-medium text-gray-800">
-                                    {item.id}
-                                </td>
-                                <td className="border border-gray-800 px-2 py-2 text-xs text-gray-800">
-                                    {item.karakteristika}
-                                    {index === 0 && (
-                                        <div className="mt-2 text-center">
-                                            <span className="bg-yellow-200 px-2 py-1 rounded text-xs font-medium">
-                                                Почетно стање –<br />по извршеној<br />процени ризика
-                                            </span>
-                                        </div>
-                                    )}
-                                </td>
-                                <td className="border border-gray-800 px-2 py-2 text-xs text-gray-600">
-                                    {editingCell === item.id && !readOnly ? (
-                                        <textarea
-                                            value={editValue}
-                                            onChange={(e) => setEditValue(e.target.value)}
-                                            onBlur={() => handleInputBlur(item.id)}
-                                            onKeyDown={(e) => handleKeyPress(e, item.id)}
-                                            className="w-full h-16 text-xs border border-blue-500 rounded p-1 resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
-                                            placeholder="Унесите вредност..."
-                                            autoFocus
-                                        />
-                                    ) : (
-                                        <div
-                                            className={`min-h-[40px] p-1 rounded ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50'}`}
-                                            onClick={() => handleCellClick(item.id, item.vrednost)}
-                                            title={readOnly ? 'Режим прегледа - измене нису дозвољене' : 'Кликните да унесете вредност'}
-                                        >
-                                            {item.vrednost || (
-                                                <span className="text-gray-400 italic">{readOnly ? 'Нема података' : 'Кликните да унесете...'}</span>
-                                            )}
-                                        </div>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
+            {Object.keys(RISK_GROUPS).map((key) => {
+                const groupIndex = parseInt(key);
+                const groupName = RISK_GROUPS[groupIndex];
 
-                        {/* Završno stanje */}
-                        {zavrsnoStanje.map((item, index) => (
-                            <tr key={item.id} className="hover:bg-gray-50">
-                                <td className="border border-gray-800 px-2 py-2 text-center font-medium text-gray-800">
-                                    {item.id}
-                                </td>
-                                <td className="border border-gray-800 px-2 py-2 text-xs text-gray-800">
-                                    {item.karakteristika}
-                                    {index === 0 && (
-                                        <div className="mt-2 text-center">
-                                            <span className="bg-blue-200 px-2 py-1 rounded text-xs font-medium">
-                                                Завршно стање –<br />по извршеном<br />ажурирању
-                                            </span>
-                                        </div>
-                                    )}
-                                </td>
-                                <td className="border border-gray-800 px-2 py-2 text-xs text-gray-600">
-                                    {editingCell === item.id && !readOnly ? (
-                                        <textarea
-                                            value={editValue}
-                                            onChange={(e) => setEditValue(e.target.value)}
-                                            onBlur={() => handleInputBlur(item.id)}
-                                            onKeyDown={(e) => handleKeyPress(e, item.id)}
-                                            className="w-full h-16 text-xs border border-blue-500 rounded p-1 resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
-                                            placeholder="Унесите вредност..."
-                                            autoFocus
-                                        />
-                                    ) : (
-                                        <div
-                                            className={`min-h-[40px] p-1 rounded ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50'}`}
-                                            onClick={() => handleCellClick(item.id, item.vrednost)}
-                                            title={readOnly ? 'Режим прегледа - измене нису дозвољене' : 'Кликните да унесете вредност'}
-                                        >
-                                            {item.vrednost || (
-                                                <span className="text-gray-400 italic">{readOnly ? 'Нема података' : 'Кликните да унесете...'}</span>
+                // Filter items for this group
+                const groupItems = Array.from(prilogSData.values()).filter(item =>
+                    item.id > groupIndex * 100 && item.id < (groupIndex + 1) * 100
+                );
+
+                const pocetnoStanje = groupItems
+                    .filter(item => item.grupa === 'pocetno')
+                    .sort((a, b) => a.id - b.id);
+
+                const zavrsnoStanje = groupItems
+                    .filter(item => item.grupa === 'zavrsno')
+                    .sort((a, b) => a.id - b.id);
+
+                return (
+                    <div key={groupIndex} className="overflow-x-auto mb-8">
+                        <table className="w-full border-collapse border-2 border-gray-800 text-xs">
+                            <thead>
+                                <tr className="bg-gray-200">
+                                    <th className="border border-gray-800 px-2 py-2 text-center font-bold text-gray-800" style={{ width: '60px' }}>
+                                        Р.<br />бр.
+                                    </th>
+                                    <th className="border border-gray-800 px-2 py-2 text-center font-bold text-gray-800" style={{ width: '300px' }}>
+                                        Карактеристике идентификованог<br />ризика
+                                    </th>
+                                    <th className="border border-gray-800 px-2 py-2 text-center font-bold text-gray-800">
+                                        {groupName.split(' ').map((word, i) => (
+                                            <React.Fragment key={i}>
+                                                {word}<br />
+                                            </React.Fragment>
+                                        ))}
+                                    </th>
+                                </tr>
+                                <tr className="bg-gray-100">
+                                    <th className="border border-gray-800 px-1 py-1 text-center text-xs font-medium text-gray-600">1</th>
+                                    <th className="border border-gray-800 px-1 py-1 text-center text-xs font-medium text-gray-600">2</th>
+                                    <th className="border border-gray-800 px-1 py-1 text-center text-xs font-medium text-gray-600">3</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {/* Početno stanje */}
+                                {pocetnoStanje.map((item, index) => (
+                                    <tr key={item.id} className="hover:bg-gray-50">
+                                        <td className="border border-gray-800 px-2 py-2 text-center font-medium text-gray-800">
+                                            {item.id % 100}
+                                        </td>
+                                        <td className="border border-gray-800 px-2 py-2 text-xs text-gray-800">
+                                            {item.karakteristika}
+                                            {index === 0 && (
+                                                <div className="mt-2 text-center">
+                                                    <span className="bg-yellow-200 px-2 py-1 rounded text-xs font-medium">
+                                                        Почетно стање –<br />по извршеној<br />процени ризика
+                                                    </span>
+                                                </div>
                                             )}
-                                        </div>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                                        </td>
+                                        <td className="border border-gray-800 px-2 py-2 text-xs text-gray-600">
+                                            {editingCell === item.id && !readOnly ? (
+                                                <textarea
+                                                    value={editValue}
+                                                    onChange={(e) => setEditValue(e.target.value)}
+                                                    onBlur={() => handleInputBlur(item.id)}
+                                                    onKeyDown={(e) => handleKeyPress(e, item.id)}
+                                                    className="w-full h-16 text-xs border border-blue-500 rounded p-1 resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                                    placeholder="Унесите вредност..."
+                                                    autoFocus
+                                                />
+                                            ) : (
+                                                <div
+                                                    className={`min-h-[40px] p-1 rounded ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50'}`}
+                                                    onClick={() => handleCellClick(item.id, item.vrednost)}
+                                                    title={readOnly ? 'Режим прегледа - измене нису дозвољене' : 'Кликните да унесете вредност'}
+                                                >
+                                                    {item.vrednost || (
+                                                        <span className="text-gray-400 italic">{readOnly ? 'Нема података' : 'Кликните да унесете...'}</span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+
+                                {/* Završno stanje */}
+                                {zavrsnoStanje.map((item, index) => (
+                                    <tr key={item.id} className="hover:bg-gray-50">
+                                        <td className="border border-gray-800 px-2 py-2 text-center font-medium text-gray-800">
+                                            {item.id % 100}
+                                        </td>
+                                        <td className="border border-gray-800 px-2 py-2 text-xs text-gray-800">
+                                            {item.karakteristika}
+                                            {index === 0 && (
+                                                <div className="mt-2 text-center">
+                                                    <span className="bg-blue-200 px-2 py-1 rounded text-xs font-medium">
+                                                        Завршно стање –<br />по извршеном<br />ажурирању
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="border border-gray-800 px-2 py-2 text-xs text-gray-600">
+                                            {editingCell === item.id && !readOnly ? (
+                                                <textarea
+                                                    value={editValue}
+                                                    onChange={(e) => setEditValue(e.target.value)}
+                                                    onBlur={() => handleInputBlur(item.id)}
+                                                    onKeyDown={(e) => handleKeyPress(e, item.id)}
+                                                    className="w-full h-16 text-xs border border-blue-500 rounded p-1 resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                                    placeholder="Унесите вредност..."
+                                                    autoFocus
+                                                />
+                                            ) : (
+                                                <div
+                                                    className={`min-h-[40px] p-1 rounded ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50'}`}
+                                                    onClick={() => handleCellClick(item.id, item.vrednost)}
+                                                    title={readOnly ? 'Режим прегледа - измене нису дозвољене' : 'Кликните да унесете вредност'}
+                                                >
+                                                    {item.vrednost || (
+                                                        <span className="text-gray-400 italic">{readOnly ? 'Нема података' : 'Кликните да унесете...'}</span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                );
+            })}
 
             {/* Napomene */}
             <div className="mt-6 text-xs text-gray-600">

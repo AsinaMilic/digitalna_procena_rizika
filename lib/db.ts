@@ -287,11 +287,12 @@ export async function initializeDatabase() {
       CREATE TABLE prilog_s (
         id SERIAL PRIMARY KEY,
         procena_id INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
+        group_id INTEGER NOT NULL,
         item_id INTEGER NOT NULL,
         vrednost TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(procena_id, item_id)
+        UNIQUE(procena_id, group_id, item_id)
       )
     `);
 

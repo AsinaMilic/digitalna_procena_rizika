@@ -12,7 +12,7 @@ export async function GET(
         const result = await pool.query(`
             SELECT * FROM prilog_s 
             WHERE procena_id = $1
-            ORDER BY item_id
+            ORDER BY group_id, item_id
         `, [procenaId]);
 
         return NextResponse.json(result.rows);
@@ -28,29 +28,29 @@ export async function POST(
 ) {
     try {
         const { id: procenaId } = await params;
-        const { itemId, vrednost } = await request.json();
+        const { groupId, itemId, vrednost } = await request.json();
         const { getDbConnection } = await import('../../../../../lib/db');
         const pool = await getDbConnection();
 
         // Proveri da li već postoji zapis
         const existingResult = await pool.query(`
             SELECT id FROM prilog_s 
-            WHERE procena_id = $1 AND item_id = $2
-        `, [procenaId, itemId]);
+            WHERE procena_id = $1 AND group_id = $2 AND item_id = $3
+        `, [procenaId, groupId, itemId]);
 
         if (existingResult.rows.length > 0) {
             // Ažuriraj postojeći zapis
             await pool.query(`
                 UPDATE prilog_s 
                 SET vrednost = $1, updated_at = CURRENT_TIMESTAMP
-                WHERE procena_id = $2 AND item_id = $3
-            `, [vrednost, procenaId, itemId]);
+                WHERE procena_id = $2 AND group_id = $3 AND item_id = $4
+            `, [vrednost, procenaId, groupId, itemId]);
         } else {
             // Kreiraj novi zapis
             await pool.query(`
-                INSERT INTO prilog_s (procena_id, item_id, vrednost, created_at, updated_at)
-                VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            `, [procenaId, itemId, vrednost]);
+                INSERT INTO prilog_s (procena_id, group_id, item_id, vrednost, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            `, [procenaId, groupId, itemId, vrednost]);
         }
 
         return NextResponse.json({ success: true });
