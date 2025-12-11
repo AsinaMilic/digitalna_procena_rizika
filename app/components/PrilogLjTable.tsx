@@ -9,6 +9,20 @@ interface PrilogLjTableProps {
     readOnly?: boolean;
 }
 
+const SECTION_TITLES: { [key: string]: string } = {
+    '1': 'ОПШТИХ ПОСЛОВНИХ АКТИВНОСТИ',
+    '2': 'ПО БЕЗБЕДНОСТ И ЗДРАВЉЕ НА РАДУ',
+    '3': 'ПРАВНИ РИЗИЦИ',
+    '4': 'ОД ПРОТИВПРАВНОГ ДЕЛОВАЊА',
+    '5': 'ОД ПОЖАРА',
+    '6': 'ОД ЕЛЕМЕНТАРНИХ НЕПОГОДА И ДРУГИХ НЕСРЕЋА',
+    '7': 'ОД ЕКСПЛОЗИЈА',
+    '8': 'ОД НЕУСАГЛАШЕНОСТИ СА СТАНДАРДИМА',
+    '9': 'ПО ЖИВОТНУ СРЕДИНУ',
+    '10': 'У УПРАВЉАЊУ ЉУДСКИМ РЕСУРСИМА',
+    '11': 'У ОБЛАСТИ ИКТ СИСТЕМА'
+};
+
 export default function PrilogLjTable({ prilogMData, procenaId, onUpdateOpis, readOnly = false }: PrilogLjTableProps) {
     const [editingOpis, setEditingOpis] = useState<string | null>(null);
     const [editValue, setEditValue] = useState<string>('');
@@ -62,7 +76,7 @@ export default function PrilogLjTable({ prilogMData, procenaId, onUpdateOpis, re
 
     const handleOpisClick = (itemId: string, currentOpis: string | null) => {
         if (readOnly) return; // Disable editing in read-only mode
-        
+
         setEditingOpis(itemId);
         setEditValue(currentOpis || '');
     };
@@ -237,54 +251,72 @@ export default function PrilogLjTable({ prilogMData, procenaId, onUpdateOpis, re
                         </tr>
                     </thead>
                     <tbody>
-                        {prilogMItems.map((item) => (
-                            <tr key={item.id} className="hover:bg-gray-50">
-                                <td className="border border-gray-800 px-2 py-2 text-center font-medium text-gray-800">
-                                    {item.id}
-                                </td>
-                                <td className="border border-gray-800 px-2 py-2 text-xs text-gray-800 align-top">
-                                    {item.requirement || 'Захтев за процену ризика'}
-                                </td>
-                                <td className="border border-gray-800 px-2 py-2 text-center">
-                                    {item.velicinaOpasnosti !== null && item.velicinaOpasnosti > 0 ? (
-                                        <span className={`inline-block w-8 h-8 rounded-full text-white font-bold text-xs leading-8 ${item.velicinaOpasnosti >= 4 ? 'bg-red-600' :
-                                            item.velicinaOpasnosti === 3 ? 'bg-yellow-600' :
-                                                item.velicinaOpasnosti === 2 ? 'bg-blue-600' :
-                                                    'bg-green-600'
-                                            }`}>
-                                            {item.velicinaOpasnosti}
-                                        </span>
-                                    ) : (
-                                        <span className="inline-block w-8 h-8 rounded-full bg-gray-300 text-gray-600 font-bold text-xs leading-8">
-                                            -
-                                        </span>
+                        {prilogMItems.map((item, index) => {
+                            const sectionId = item.id.split('.')[0];
+                            const prevSectionId = index > 0 ? prilogMItems[index - 1].id.split('.')[0] : null;
+                            const isNewSection = sectionId !== prevSectionId;
+
+                            return (
+                                <React.Fragment key={item.id}>
+                                    {isNewSection && SECTION_TITLES[sectionId] && (
+                                        <tr className="bg-gray-300">
+                                            <td className="border border-gray-800 px-2 py-2 text-center font-bold text-gray-800">
+                                                {sectionId}
+                                            </td>
+                                            <td className="border border-gray-800 px-2 py-2 font-bold text-gray-800 text-xs" colSpan={3}>
+                                                {SECTION_TITLES[sectionId]}
+                                            </td>
+                                        </tr>
                                     )}
-                                </td>
-                                <td className="border border-gray-800 px-2 py-2 text-xs text-gray-600">
-                                    {editingOpis === item.id ? (
-                                        <textarea
-                                            value={editValue}
-                                            onChange={(e) => setEditValue(e.target.value)}
-                                            onBlur={() => handleOpisBlur(item.id)}
-                                            onKeyDown={(e) => handleKeyPress(e, item.id)}
-                                            className="w-full h-20 text-xs border border-blue-500 rounded p-1 resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
-                                            placeholder="Унесите опис идентификованих ризика..."
-                                            autoFocus
-                                        />
-                                    ) : (
-                                        <div
-                                            className={`min-h-[20px] p-1 rounded ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50'}`}
-                                            onClick={() => handleOpisClick(item.id, localOpisData.get(item.id) || item.opisIdentifikovanihRizika || null)}
-                                            title={readOnly ? 'Режим прегледа - измене нису дозвољене' : 'Кликните да унесете опис идентификованих ризика'}
-                                        >
-                                            {localOpisData.get(item.id) || item.opisIdentifikovanihRizika || (
-                                                <span className="text-gray-400 italic">Кликните да унесете опис...</span>
+                                    <tr className="hover:bg-gray-50">
+                                        <td className="border border-gray-800 px-2 py-2 text-center font-medium text-gray-800">
+                                            {item.id}
+                                        </td>
+                                        <td className="border border-gray-800 px-2 py-2 text-xs text-gray-800 align-top">
+                                            {item.requirement || 'Захтев за процену ризика'}
+                                        </td>
+                                        <td className="border border-gray-800 px-2 py-2 text-center">
+                                            {item.velicinaOpasnosti !== null && item.velicinaOpasnosti > 0 ? (
+                                                <span className={`inline-block w-8 h-8 rounded-full text-white font-bold text-xs leading-8 ${item.velicinaOpasnosti >= 4 ? 'bg-red-600' :
+                                                    item.velicinaOpasnosti === 3 ? 'bg-yellow-600' :
+                                                        item.velicinaOpasnosti === 2 ? 'bg-blue-600' :
+                                                            'bg-green-600'
+                                                    }`}>
+                                                    {item.velicinaOpasnosti}
+                                                </span>
+                                            ) : (
+                                                <span className="inline-block w-8 h-8 rounded-full bg-gray-300 text-gray-600 font-bold text-xs leading-8">
+                                                    -
+                                                </span>
                                             )}
-                                        </div>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
+                                        </td>
+                                        <td className="border border-gray-800 px-2 py-2 text-xs text-gray-600">
+                                            {editingOpis === item.id ? (
+                                                <textarea
+                                                    value={editValue}
+                                                    onChange={(e) => setEditValue(e.target.value)}
+                                                    onBlur={() => handleOpisBlur(item.id)}
+                                                    onKeyDown={(e) => handleKeyPress(e, item.id)}
+                                                    className="w-full h-20 text-xs border border-blue-500 rounded p-1 resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                                    placeholder="Унесите опис идентификованих ризика..."
+                                                    autoFocus
+                                                />
+                                            ) : (
+                                                <div
+                                                    className={`min-h-[20px] p-1 rounded ${readOnly ? '' : 'cursor-pointer hover:bg-gray-50'}`}
+                                                    onClick={() => handleOpisClick(item.id, localOpisData.get(item.id) || item.opisIdentifikovanihRizika || null)}
+                                                    title={readOnly ? 'Режим прегледа - измене нису дозвољене' : 'Кликните да унесете опис идентификованих ризика'}
+                                                >
+                                                    {localOpisData.get(item.id) || item.opisIdentifikovanihRizika || (
+                                                        <span className="text-gray-400 italic">Кликните да унесете опис...</span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </td>
+                                    </tr>
+                                </React.Fragment>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>
