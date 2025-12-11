@@ -179,6 +179,35 @@ export default function PrilogMTable({ prilogMData, onShowDetails, onUpdateItem,
         }
     };
 
+    // Calculate Aggregate Data
+    const allItems = Array.from(prilogMData.values()).filter(item =>
+        item.velicinaOpasnosti && item.posledice && item.steta
+    );
+
+    let totalData = null;
+    if (allItems.length > 0) {
+        const avgNivoRizika = Math.round(
+            allItems.reduce((sum, item) => sum + (item.nivoRizika || 0), 0) / allItems.length
+        );
+
+        // Determine Category based on P.1
+        let avgKategorija = 5;
+        if (avgNivoRizika >= 20) avgKategorija = 1;
+        else if (avgNivoRizika >= 10) avgKategorija = 2;
+        else if (avgNivoRizika >= 6) avgKategorija = 3;
+        else if (avgNivoRizika >= 3) avgKategorija = 4;
+        else avgKategorija = 5;
+
+        // Determine Acceptability based on P.2
+        const avgPrihvatljivost = avgNivoRizika >= 6 ? 'NEPRIHVATLJIV' : 'PRIHVATLJIV';
+
+        totalData = {
+            nivoRizika: avgNivoRizika,
+            kategorija: avgKategorija,
+            prihvatljivost: avgPrihvatljivost
+        };
+    }
+
     return (
         <div className="p-6 bg-white border-2 border-gray-800 rounded-lg">
             <h2 className="font-bold text-gray-800 mb-6 text-center text-lg">
@@ -323,11 +352,11 @@ export default function PrilogMTable({ prilogMData, onShowDetails, onUpdateItem,
                                 // Dodaj sekcijski red ako je nova sekcija
                                 if (currentSection && (!prevSection || prevSection.number !== currentSection.number)) {
                                     acc.push(
-                                        <tr key={`section-${currentSection.number}`} className="bg-gray-400">
-                                            <td className="border border-gray-800 px-1 py-2 text-center font-bold text-white text-xs">
+                                        <tr key={`section-${currentSection.number}`} className="bg-gray-300">
+                                            <td className="border border-gray-800 px-1 py-2 text-center font-bold text-gray-900 text-xs">
                                                 {currentSection.number}
                                             </td>
-                                            <td className="border border-gray-800 px-2 py-2 font-bold text-white text-xs" colSpan={12}>
+                                            <td className="border border-gray-800 px-2 py-2 font-bold text-gray-900 text-xs text-left" colSpan={12}>
                                                 {currentSection.title}
                                             </td>
                                         </tr>
@@ -623,10 +652,44 @@ export default function PrilogMTable({ prilogMData, onShowDetails, onUpdateItem,
                                 return acc;
                             }, [] as React.ReactElement[])
                             .concat([
-                                // Dodaj poslednji red za ukupan nivo rizika
                                 <tr key="summary-row" className="bg-gray-600">
-                                    <td className="border border-gray-800 px-2 py-2 font-bold text-white text-xs text-center" colSpan={13}>
+                                    <td className="border border-gray-800 px-2 py-2 font-bold text-white text-xs text-center" colSpan={9}>
                                         НИВО АГРЕГАТНОГ РИЗИКА, КАТЕГОРИЈА И ПРИХВАТЉИВОСТ РИЗИКА
+                                    </td>
+                                    <td className="border border-gray-800 px-1 py-2 text-center">
+                                        {totalData && (
+                                            <span className={`inline-block px-2 py-1 rounded text-white font-bold text-xs ${totalData.nivoRizika >= 20 ? 'bg-red-700' :
+                                                    totalData.nivoRizika >= 15 ? 'bg-red-600' :
+                                                        totalData.nivoRizika >= 10 ? 'bg-orange-600' :
+                                                            totalData.nivoRizika >= 6 ? 'bg-yellow-600' :
+                                                                'bg-green-600'
+                                                }`}>
+                                                {totalData.nivoRizika}
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className="border border-gray-800 px-1 py-2 text-center">
+                                        {totalData && (
+                                            <span className={`inline-block px-2 py-1 rounded text-white font-bold text-xs ${totalData.kategorija === 1 ? 'bg-red-700' :
+                                                    totalData.kategorija === 2 ? 'bg-orange-600' :
+                                                        totalData.kategorija === 3 ? 'bg-yellow-600' :
+                                                            totalData.kategorija === 4 ? 'bg-blue-600' :
+                                                                'bg-green-600'
+                                                }`}>
+                                                {totalData.kategorija}
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className="border border-gray-800 px-1 py-2 text-center">
+                                        {totalData && (
+                                            <span className={`inline-block px-2 py-1 rounded text-white font-bold text-xs ${totalData.prihvatljivost === 'NEPRIHVATLJIV' ? 'bg-red-600' : 'bg-green-600'
+                                                }`}>
+                                                {totalData.prihvatljivost === 'NEPRIHVATLJIV' ? 'НЕ' : 'ДА'}
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className="border border-gray-800 px-1 py-2 bg-gray-400">
+                                        {/* Empty filler for Details column */}
                                     </td>
                                 </tr>
                             ])}
