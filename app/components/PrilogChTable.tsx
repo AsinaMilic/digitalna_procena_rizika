@@ -1,10 +1,11 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 interface PrilogChTableProps {
     procenaId: string;
     readOnly?: boolean;
     resourceScoreOverride?: number | null;
+    prilogUScoreOverride?: number | null;
 }
 
 interface TableChData {
@@ -26,7 +27,7 @@ const REQUIREMENTS = [
     { key: 'zahtev_dj', label: 'ђ) користи доступне евиденције, сазнања и јавно доступне базе података и интернет платформе. (Препорука)', type: 'range' },
 ];
 
-export default function PrilogChTable({ procenaId, readOnly = false, resourceScoreOverride }: PrilogChTableProps) {
+export default function PrilogChTable({ procenaId, readOnly = false, resourceScoreOverride, prilogUScoreOverride }: PrilogChTableProps) {
     const [data, setData] = useState<TableChData>({
         zahtev_a: null, zahtev_b: null, zahtev_v: null,
         zahtev_g: null, zahtev_d: null, zahtev_dj: null, final_score: null
@@ -131,28 +132,34 @@ export default function PrilogChTable({ procenaId, readOnly = false, resourceSco
                             <tr key={req.key} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                                 <td className="border p-2">{req.label}</td>
                                 <td className="border p-2 text-center">
-                                    <select
-                                        className="w-full p-1 border rounded text-center"
-                                        value={data[req.key as keyof TableChData] ?? ''}
-                                        onChange={(e) => handleScoreChange(req.key as keyof TableChData, parseInt(e.target.value))}
-                                        disabled={readOnly}
-                                    >
-                                        <option value="" disabled>-</option>
-                                        {req.type === 'strict' ? (
-                                            <>
-                                                <option value="0">0</option>
-                                                <option value="5">5</option>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <option value="1">1</option>
-                                                <option value="2">2</option>
-                                                <option value="3">3</option>
-                                                <option value="4">4</option>
-                                                <option value="5">5</option>
-                                            </>
-                                        )}
-                                    </select>
+                                    {req.key === 'zahtev_v' && prilogUScoreOverride !== undefined && prilogUScoreOverride !== null ? (
+                                        <div className="font-bold text-purple-800 bg-purple-100 p-1 rounded">
+                                            {prilogUScoreOverride.toFixed(2)}
+                                        </div>
+                                    ) : (
+                                        <select
+                                            className="w-full p-1 border rounded text-center"
+                                            value={data[req.key as keyof TableChData] ?? ''}
+                                            onChange={(e) => handleScoreChange(req.key as keyof TableChData, parseFloat(e.target.value))}
+                                            disabled={readOnly || (req.key === 'zahtev_v' && prilogUScoreOverride !== null)}
+                                        >
+                                            <option value="" disabled>-</option>
+                                            {req.type === 'strict' ? (
+                                                <>
+                                                    <option value="0">0</option>
+                                                    <option value="5">5</option>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <option value="1">1</option>
+                                                    <option value="2">2</option>
+                                                    <option value="3">3</option>
+                                                    <option value="4">4</option>
+                                                    <option value="5">5</option>
+                                                </>
+                                            )}
+                                        </select>
+                                    )}
                                 </td>
                                 <td className="border p-2 text-center text-gray-600 bg-gray-100 font-medium">
                                     {resourceScore.toFixed(2)}

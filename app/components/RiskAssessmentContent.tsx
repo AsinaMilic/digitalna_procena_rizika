@@ -11,6 +11,7 @@ import PrilogLjTable from "./PrilogLjTable";
 import PrilogSTable from "./PrilogSTable";
 import PrilogB1Table from "./PrilogB1Table";
 import PrilogTTable from "./PrilogTTable";
+import PrilogUTable from "./PrilogUTable";
 import PrilogChTable from "./PrilogChTable";
 import TabelaF5 from "./TabelaF5";
 import RiskParametersForm from "./RiskParametersForm";
@@ -83,6 +84,7 @@ export default function RiskAssessmentContent({
     const [showParametersForm, setShowParametersForm] = useState(false);
     const [showFinancialForm, setShowFinancialForm] = useState(false);
     const [sharedResourceScore, setSharedResourceScore] = useState<number | null>(null);
+    const [sharedPrilogUScore, setSharedPrilogUScore] = useState<number | null>(null);
 
     const handleCellClick = async (riskId: string, dangerLevel: number, description: string) => {
 
@@ -280,11 +282,19 @@ export default function RiskAssessmentContent({
                         onResourceScoreUpdate={setSharedResourceScore}
                     />
 
+                    {/* Prilog U table - Kvalifikovanost menadzera */}
+                    <PrilogUTable
+                        procenaId={procenaId}
+                        readOnly={readOnly}
+                        onScoreUpdate={setSharedPrilogUScore}
+                    />
+
                     {/* Prilog Ћ table - Matrica za ocenjivanje */}
                     <PrilogChTable
                         procenaId={procenaId}
                         readOnly={readOnly}
                         resourceScoreOverride={sharedResourceScore}
+                        prilogUScoreOverride={sharedPrilogUScore}
                     />
 
                     {/* Tabela F.5 - Mere za postupanje sa rizicima */}
