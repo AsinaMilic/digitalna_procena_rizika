@@ -326,6 +326,23 @@ export async function initializeDatabase() {
       )
     `);
 
+    // Kreiranje tabele PrilogT - Ocena resursa
+    await pool.query(`
+      CREATE TABLE prilog_t (
+        id SERIAL PRIMARY KEY,
+        procena_id INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
+        kapital_score INTEGER,
+        menadzeri_score INTEGER,
+        osiguranje_score INTEGER,
+        registar_score INTEGER,
+        zarada_score INTEGER,
+        prosek_resursa DECIMAL(5,2),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(procena_id)
+      )
+    `);
+
     // Kreiranje indeksa
     await pool.query(`
       CREATE INDEX idx_pravno_lice_maticni_broj ON PravnoLice(maticni_broj);

@@ -10,6 +10,7 @@ import PrilogMTable from "./PrilogMTable";
 import PrilogLjTable from "./PrilogLjTable";
 import PrilogSTable from "./PrilogSTable";
 import PrilogB1Table from "./PrilogB1Table";
+import PrilogTTable from "./PrilogTTable";
 import TabelaF5 from "./TabelaF5";
 import RiskParametersForm from "./RiskParametersForm";
 import FinancialDataWarning from "./FinancialDataWarning";
@@ -264,6 +265,12 @@ export default function RiskAssessmentContent({
 
                     {/* Prilog B1 table - Uticaj delatnosti */}
                     <PrilogB1Table
+                        procenaId={procenaId}
+                        readOnly={readOnly}
+                    />
+
+                    {/* Prilog T table - Ocena resursa */}
+                    <PrilogTTable
                         procenaId={procenaId}
                         readOnly={readOnly}
                     />
