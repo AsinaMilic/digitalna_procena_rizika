@@ -296,17 +296,47 @@ export async function initializeDatabase() {
       )
     `);
 
-    // Kreiranje tabele TabelaF5 - mere za postupanje sa rizicima
+    // Kreiranje tabele TabelaF5 - mere za postupanje sa rizicima (Dynamic rows)
     await pool.query(`
       CREATE TABLE tabela_f5 (
         id SERIAL PRIMARY KEY,
         procena_id INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
-        item_id INTEGER NOT NULL,
+        group_id INTEGER NOT NULL,
         mera TEXT,
         opis_i_obrazlozenje TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Kreiranje tabele PrilogFData - Podaci za F.1, F.2, F.3, F.4
+    await pool.query(`
+      CREATE TABLE prilog_f_data (
+        id SERIAL PRIMARY KEY,
+        procena_id INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
+        
+        -- F.1 Podaci o organizaciji koja vrsi procenu
+        f1_podaci_o_organizaciji TEXT,
+        f1_menadzer_rizika TEXT,
+        
+        -- F.2 Podaci o posmatranoj organizaciji
+        f2_podaci_o_posmatranoj_org TEXT,
+        f2_sifra_delatnosti TEXT,
+        f2_odgovorno_lice TEXT,
+        f2_podaci_o_licima TEXT,
+        
+        -- F.3 Kontekst procene rizika (JSON)
+        f3_eksterni_kontekst JSONB,
+        f3_interni_kontekst JSONB,
+        
+        -- F.4 Procena rizika (JSON)
+        f4_identifikacija JSONB,
+        f4_analiza JSONB,
+        f4_vrednovanje JSONB,
+        
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(procena_id, item_id)
+        UNIQUE(procena_id)
       )
     `);
 

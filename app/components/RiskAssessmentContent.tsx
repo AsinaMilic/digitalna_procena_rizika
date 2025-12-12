@@ -13,7 +13,7 @@ import PrilogB1Table from "./PrilogB1Table";
 import PrilogTTable from "./PrilogTTable";
 import PrilogUTable from "./PrilogUTable";
 import PrilogChTable from "./PrilogChTable";
-import TabelaF5 from "./TabelaF5";
+import PrilogFContainer from "./PrilogF/PrilogFContainer";
 import RiskParametersForm from "./RiskParametersForm";
 import FinancialDataWarning from "./FinancialDataWarning";
 import FinancialDataForm from "./FinancialDataForm";
@@ -297,13 +297,10 @@ export default function RiskAssessmentContent({
                         prilogUScoreOverride={sharedPrilogUScore}
                     />
 
-                    {/* Tabela F.5 - Mere za postupanje sa rizicima */}
-                    <TabelaF5
+                    {/* Prilog F Container - Акт о процени ризика (Табеле Ф.1 - Ф.5) */}
+                    <PrilogFContainer
                         procenaId={procenaId}
                         readOnly={readOnly}
-                        onUpdateItem={readOnly ? undefined : async (itemId: number, field: 'mera' | 'opisIObrazlozenje', value: string) => {
-                            console.log(`✅ Updated Tabela F.5 item ${itemId} field ${field} with value: ${value}`);
-                        }}
                     />
                 </div>
             )}
