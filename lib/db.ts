@@ -310,6 +310,22 @@ export async function initializeDatabase() {
       )
     `);
 
+    // Kreiranje tabele PrilogB1 - Uticaj delatnosti
+    await pool.query(`
+      CREATE TABLE prilog_b1 (
+        id SERIAL PRIMARY KEY,
+        procena_id INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
+        group_id INTEGER NOT NULL,
+        uticaj DECIMAL(5,2) DEFAULT 0,
+        iud DECIMAL(5,4),
+        vk INTEGER,
+        k INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(procena_id, group_id)
+      )
+    `);
+
     // Kreiranje indeksa
     await pool.query(`
       CREATE INDEX idx_pravno_lice_maticni_broj ON PravnoLice(maticni_broj);

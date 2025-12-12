@@ -9,6 +9,7 @@ import RiskAssessmentMainTable from "./RiskAssessmentMainTable";
 import PrilogMTable from "./PrilogMTable";
 import PrilogLjTable from "./PrilogLjTable";
 import PrilogSTable from "./PrilogSTable";
+import PrilogB1Table from "./PrilogB1Table";
 import TabelaF5 from "./TabelaF5";
 import RiskParametersForm from "./RiskParametersForm";
 import FinancialDataWarning from "./FinancialDataWarning";
@@ -82,7 +83,7 @@ export default function RiskAssessmentContent({
 
     const handleCellClick = async (riskId: string, dangerLevel: number, description: string) => {
         if (readOnly) return; // Disable cell clicks in read-only mode
-        
+
         const result = await onCellClick(riskId, dangerLevel, description);
         if (result?.showParametersForm) {
             setShowParametersForm(true);
@@ -223,7 +224,7 @@ export default function RiskAssessmentContent({
 
                     {/* Prilog Lj table - prikaži samo ako ima podataka */}
                     {prilogMData.size > 0 && (
-                        <PrilogLjTable 
+                        <PrilogLjTable
                             prilogMData={prilogMData}
                             procenaId={procenaId}
                             readOnly={readOnly}
@@ -253,7 +254,7 @@ export default function RiskAssessmentContent({
                     )}
 
                     {/* Prilog S table - prikaži uvek */}
-                    <PrilogSTable 
+                    <PrilogSTable
                         procenaId={procenaId}
                         readOnly={readOnly}
                         onUpdateItem={readOnly ? undefined : async (itemId: number, vrednost: string) => {
@@ -261,8 +262,14 @@ export default function RiskAssessmentContent({
                         }}
                     />
 
+                    {/* Prilog B1 table - Uticaj delatnosti */}
+                    <PrilogB1Table
+                        procenaId={procenaId}
+                        readOnly={readOnly}
+                    />
+
                     {/* Tabela F.5 - Mere za postupanje sa rizicima */}
-                    <TabelaF5 
+                    <TabelaF5
                         procenaId={procenaId}
                         readOnly={readOnly}
                         onUpdateItem={readOnly ? undefined : async (itemId: number, field: 'mera' | 'opisIObrazlozenje', value: string) => {
