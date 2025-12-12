@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 interface PrilogTTableProps {
     procenaId: string;
     readOnly?: boolean;
+    onResourceScoreUpdate?: (score: number) => void;
 }
 
 interface TableT2Data {
@@ -15,7 +16,7 @@ interface TableT2Data {
     prosek_resursa: number | null;
 }
 
-export default function PrilogTTable({ procenaId, readOnly = false }: PrilogTTableProps) {
+export default function PrilogTTable({ procenaId, readOnly = false, onResourceScoreUpdate }: PrilogTTableProps) {
     const [data, setData] = useState<TableT2Data>({
         kapital_score: null,
         menadzeri_score: null,
@@ -71,6 +72,9 @@ export default function PrilogTTable({ procenaId, readOnly = false }: PrilogTTab
             if (response.ok) {
                 const result = await response.json();
                 setData(prev => ({ ...prev, prosek_resursa: result.prosek_resursa }));
+                if (onResourceScoreUpdate) {
+                    onResourceScoreUpdate(result.prosek_resursa);
+                }
             }
         } catch (error) {
             console.error('Error saving Prilog T data:', error);

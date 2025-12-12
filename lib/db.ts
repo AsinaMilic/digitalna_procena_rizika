@@ -343,6 +343,24 @@ export async function initializeDatabase() {
       )
     `);
 
+    // Kreiranje tabele PrilogCh - Matrica za ocenjivanje
+    await pool.query(`
+      CREATE TABLE prilog_ch (
+        id SERIAL PRIMARY KEY,
+        procena_id INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
+        zahtev_a INTEGER,
+        zahtev_b INTEGER,
+        zahtev_v INTEGER,
+        zahtev_g INTEGER,
+        zahtev_d INTEGER,
+        zahtev_dj INTEGER,
+        final_score DECIMAL(5,2),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(procena_id)
+      )
+    `);
+
     // Kreiranje indeksa
     await pool.query(`
       CREATE INDEX idx_pravno_lice_maticni_broj ON PravnoLice(maticni_broj);
