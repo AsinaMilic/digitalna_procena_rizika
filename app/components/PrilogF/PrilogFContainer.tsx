@@ -54,7 +54,7 @@ export default function PrilogFContainer({ procenaId, readOnly = false }: Prilog
         if (procenaId) fetchData();
     }, [procenaId]);
 
-    const handleChange = async (field: keyof PrilogFData, value: any) => {
+    const handleChange = async (field: keyof PrilogFData, value: PrilogFData[keyof PrilogFData]) => {
         const newData = { ...data, [field]: value };
         setData(newData);
 

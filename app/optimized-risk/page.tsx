@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import OptimizedRiskAssessment from '../components/OptimizedRiskAssessment';
+import LegalEntityForm from '../components/LegalEntityForm';
 
 interface PravnoLice {
     id: number;
@@ -14,76 +15,74 @@ export default function OptimizedRiskPage() {
     const [step, setStep] = useState<'pravno-lice' | 'procena'>('pravno-lice');
     const [procenaId, setProcenaId] = useState<string>('');
     const [pravnoLice, setPravnoLice] = useState<PravnoLice | null>(null);
-    
-    // Stilovi za input polja
-    const inputStyle = "w-full p-4 border border-slate-300 rounded-xl text-black placeholder-slate-500 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 text-base font-medium";
-    const textareaStyle = "w-full p-4 border border-slate-300 rounded-xl text-black placeholder-slate-500 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 resize-none text-base font-medium";
-    
-    // Form state za pravno lice
-    const [naziv, setNaziv] = useState('');
-    const [skraceno_poslovno_ime, setSkracenoPoslovnoIme] = useState('');
-    const [pib, setPib] = useState('');
-    const [maticni_broj, setMaticniBroj] = useState('');
-    const [adresa_sediste, setAdresaSediste] = useState('');
-    const [adresa_ostala, setAdresaOstala] = useState('');
-    const [sifra_delatnosti, setSifraDelatnosti] = useState('');
-    const [lice_zastupanje, setLiceZastupanje] = useState('');
-    const [lice_komunikacija, setLiceKomunikacija] = useState('');
-    const [tim_procena_rizika, setTimProcenaRizika] = useState('');
-    const [telefon_faks, setTelefonFaks] = useState('');
-    const [internet_adresa, setInternetAdresa] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [existingPravnaLica, setExistingPravnaLica] = useState<PravnoLice[]>([]);
+    const [loadingEntities, setLoadingEntities] = useState(true);
+    const [selectionMode, setSelectionMode] = useState<'select' | 'new'>('select');
+    const [selectedEntityId, setSelectedEntityId] = useState<number | null>(null);
+    const [creatingProcena, setCreatingProcena] = useState(false);
 
-    // Funkcija za čuvanje pravnog lica i kreiranje procene
-    const handleSubmitPravnoLice = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        
+    // Fetch existing entities on mount
+    useEffect(() => {
+        const fetchEntities = async () => {
+            try {
+                const response = await fetch('/api/pravno-lice');
+                if (response.ok) {
+                    const data = await response.json();
+                    setExistingPravnaLica(data);
+                }
+            } catch (error) {
+                console.error('Error fetching entities:', error);
+            } finally {
+                setLoadingEntities(false);
+            }
+        };
+        fetchEntities();
+    }, []);
+
+    const handleSelectExisting = async () => {
+        if (!selectedEntityId) return;
+        setCreatingProcena(true);
+
         try {
-            const response = await fetch('/api/pravno-lice', {
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/procena', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    naziv,
-                    skraceno_poslovno_ime,
-                    pib,
-                    maticni_broj,
-                    adresa_sediste,
-                    adresa_ostala,
-                    sifra_delatnosti,
-                    lice_zastupanje,
-                    lice_komunikacija,
-                    tim_procena_rizika,
-                    telefon_faks,
-                    internet_adresa,
-                    adresa: adresa_sediste // Za kompatibilnost
+                    pravnoLiceId: selectedEntityId
                 })
             });
 
-            const data = await response.json();
-            
-            if (data.success) {
-                // Sačuvaj podatke o pravnom licu
-                setPravnoLice({
-                    id: data.pravnoLiceId,
-                    naziv,
-                    pib,
-                    adresa: adresa_sediste
-                });
-                
-                // Postavi procena ID i pređi na sledeći korak
+            if (response.ok) {
+                const data = await response.json();
+                const selectedEntity = existingPravnaLica.find(p => p.id === selectedEntityId);
+
+                if (selectedEntity) {
+                    setPravnoLice(selectedEntity);
+                }
+
                 setProcenaId(data.procenaId.toString());
                 setStep('procena');
             } else {
-                alert(data.error || 'Greška pri čuvanju podataka');
+                const errorData = await response.json();
+                if (errorData.existingProcenaId) {
+                    const selectedEntity = existingPravnaLica.find(p => p.id === selectedEntityId);
+                    if (selectedEntity) setPravnoLice(selectedEntity);
+
+                    setProcenaId(errorData.existingProcenaId.toString());
+                    setStep('procena');
+                } else {
+                    alert(errorData.error || 'Greška pri kreiranju procene');
+                }
             }
         } catch (error) {
-            console.error('Greška:', error);
+            console.error('Error creating assessment:', error);
             alert('Greška pri komunikaciji sa serverom');
         } finally {
-            setLoading(false);
+            setCreatingProcena(false);
         }
     };
 
@@ -92,252 +91,126 @@ export default function OptimizedRiskPage() {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 py-8 px-4">
                 <div className="max-w-6xl mx-auto">
-                    <form
-                        onSubmit={handleSubmitPravnoLice}
-                        className="relative bg-white p-12 rounded-2xl shadow-xl border border-slate-200 space-y-8"
-                    >
-                        {/* Header */}
-                        <div className="text-center border-b border-slate-200 pb-8 mb-2">
-                            <div className="flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-full shadow-lg mx-auto mb-6">
-                                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                                </svg>
-                            </div>
-                            <h2 className="text-3xl font-bold text-slate-800 mb-2">
-                                Процена ризика
-                            </h2>
-                            <p className="text-slate-600">
-                                Унесите детaljне податке о правном лицу за започињање процене ризика
-                            </p>
-                        </div>
-
-                    <div className="flex flex-col gap-8 w-full">
-                        {/* Основни подаци */}
-                        <div className="space-y-6">
-                            <h3 className="text-xl font-semibold text-slate-800 border-b border-slate-200 pb-3">
-                                📋 Основни подаци
-                            </h3>
-                            
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <div className="flex flex-col gap-2">
-                                    <label htmlFor="naziv" className="text-base font-semibold text-slate-700">
-                                        Пословно име (пун назив) *
-                                    </label>
-                                    <input
-                                        id="naziv"
-                                        type="text"
-                                        placeholder="Унесите пун назив правног лица..."
-                                        value={naziv}
-                                        onChange={e => setNaziv(e.target.value)}
-                                        className={inputStyle}
-                                        required
-                                    />
-                                </div>
-                                
-                                <div className="flex flex-col gap-2">
-                                    <label htmlFor="skraceno_poslovno_ime" className="text-base font-semibold text-slate-700">
-                                        Скраћено пословно име
-                                    </label>
-                                    <input
-                                        id="skraceno_poslovno_ime"
-                                        type="text"
-                                        placeholder="Скраћени назив..."
-                                        value={skraceno_poslovno_ime}
-                                        onChange={e => setSkracenoPoslovnoIme(e.target.value)}
-                                        className={inputStyle}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <div className="flex flex-col gap-2">
-                                    <label htmlFor="pib" className="text-base font-semibold text-slate-700">
-                                        ПИБ *
-                                    </label>
-                                    <input
-                                        id="pib"
-                                        type="text"
-                                        placeholder="Унесите ПИБ..."
-                                        value={pib}
-                                        onChange={e => setPib(e.target.value)}
-                                        className={inputStyle}
-                                        required
-                                    />
-                                </div>
-                                
-                                <div className="flex flex-col gap-2">
-                                    <label htmlFor="maticni_broj" className="text-base font-semibold text-slate-700">
-                                        Матични број
-                                    </label>
-                                    <input
-                                        id="maticni_broj"
-                                        type="text"
-                                        placeholder="Унесите матични број..."
-                                        value={maticni_broj}
-                                        onChange={e => setMaticniBroj(e.target.value)}
-                                        className={inputStyle}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col gap-2">
-                                <label htmlFor="sifra_delatnosti" className="text-base font-semibold text-slate-700">
-                                    Шифра делатности
-                                </label>
-                                <input
-                                    id="sifra_delatnosti"
-                                    type="text"
-                                    placeholder="Унесите шифру делатности..."
-                                    value={sifra_delatnosti}
-                                    onChange={e => setSifraDelatnosti(e.target.value)}
-                                    className={inputStyle}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Адресе */}
-                        <div className="space-y-6">
-                            <h3 className="text-xl font-semibold text-slate-800 border-b border-slate-200 pb-3">
-                                🏢 Адресе
-                            </h3>
-                            
-                            <div className="flex flex-col gap-2">
-                                <label htmlFor="adresa_sediste" className="text-base font-semibold text-slate-700">
-                                    Адреса седишта
-                                </label>
-                                <input
-                                    id="adresa_sediste"
-                                    type="text"
-                                    placeholder="Унесите адресу седишта..."
-                                    value={adresa_sediste}
-                                    onChange={e => setAdresaSediste(e.target.value)}
-                                    className={inputStyle}
-                                />
-                            </div>
-                            
-                            <div className="flex flex-col gap-2">
-                                <label htmlFor="adresa_ostala" className="text-base font-semibold text-slate-700">
-                                    Адресе огранака и осталих функционалних целина
-                                </label>
-                                <textarea
-                                    id="adresa_ostala"
-                                    placeholder="Унесите адресе огранака, издвојених места и осталих функционалних целина које нису на истој адреси као седиште..."
-                                    value={adresa_ostala}
-                                    onChange={e => setAdresaOstala(e.target.value)}
-                                    rows={3}
-                                    className={textareaStyle}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Контакт подаци */}
-                        <div className="space-y-6">
-                            <h3 className="text-xl font-semibold text-slate-800 border-b border-slate-200 pb-3">
-                                📞 Контакт подаци
-                            </h3>
-                            
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <div className="flex flex-col gap-2">
-                                    <label htmlFor="telefon_faks" className="text-base font-semibold text-slate-700">
-                                        Број телефона / факса
-                                    </label>
-                                    <input
-                                        id="telefon_faks"
-                                        type="text"
-                                        placeholder="Унесите број телефона/факса..."
-                                        value={telefon_faks}
-                                        onChange={e => setTelefonFaks(e.target.value)}
-                                        className={inputStyle}
-                                    />
-                                </div>
-                                
-                                <div className="flex flex-col gap-2">
-                                    <label htmlFor="internet_adresa" className="text-base font-semibold text-slate-700">
-                                        Интернет адреса
-                                    </label>
-                                    <input
-                                        id="internet_adresa"
-                                        type="url"
-                                        placeholder="https://www.example.com"
-                                        value={internet_adresa}
-                                        onChange={e => setInternetAdresa(e.target.value)}
-                                        className={inputStyle}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Одговорна лица */}
-                        <div className="space-y-6">
-                            <h3 className="text-xl font-semibold text-slate-800 border-b border-slate-200 pb-3">
-                                👥 Одговорна лица
-                            </h3>
-                            
-                            <div className="flex flex-col gap-2">
-                                <label htmlFor="lice_zastupanje" className="text-base font-semibold text-slate-700">
-                                    Лице одговорно за заступање
-                                </label>
-                                <input
-                                    id="lice_zastupanje"
-                                    type="text"
-                                    placeholder="Име, презиме и функција лица одговорног за заступање..."
-                                    value={lice_zastupanje}
-                                    onChange={e => setLiceZastupanje(e.target.value)}
-                                    className={inputStyle}
-                                />
-                            </div>
-                            
-                            <div className="flex flex-col gap-2">
-                                <label htmlFor="lice_komunikacija" className="text-base font-semibold text-slate-700">
-                                    Лице овлашћено за комуникацију у вези процене ризика
-                                </label>
-                                <input
-                                    id="lice_komunikacija"
-                                    type="text"
-                                    placeholder="Име, презиме и контакт лица за комуникацију..."
-                                    value={lice_komunikacija}
-                                    onChange={e => setLiceKomunikacija(e.target.value)}
-                                    className={inputStyle}
-                                />
-                            </div>
-                            
-                            <div className="flex flex-col gap-2">
-                                <label htmlFor="tim_procena_rizika" className="text-base font-semibold text-slate-700">
-                                    Тим за процену ризика
-                                </label>
-                                <textarea
-                                    id="tim_procena_rizika"
-                                    placeholder="Подаци о лицима из организације која учествују у тиму за процену ризика (име, презиме, стручна спрема)..."
-                                    value={tim_procena_rizika}
-                                    onChange={e => setTimProcenaRizika(e.target.value)}
-                                    rows={4}
-                                    className={textareaStyle}
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                        {/* Submit button */}
-                        <div className="border-t border-slate-200 pt-6">
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-5 px-8 rounded-xl shadow-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
-                            >
-                                {loading ? "⏳ Сачекајте..." : "🚀 Започни процену ризика"}
-                            </button>
-
-                            {/* Security note */}
-                            <div className="mt-4 text-center text-xs text-slate-500">
-                                <span className="inline-flex items-center gap-1">
-                                    <svg className='inline w-4 h-4 text-slate-400' fill='none' stroke='currentColor' strokeWidth='2' viewBox='0 0 24 24'>
-                                        <path strokeLinecap='round' d='M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'/>
+                    {selectionMode === 'select' ? (
+                        <div className="bg-white p-12 rounded-2xl shadow-xl border border-slate-200">
+                            <div className="text-center border-b border-slate-200 pb-8 mb-8">
+                                <div className="flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-full shadow-lg mx-auto mb-6">
+                                    <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                                     </svg>
-                                    Ваши подаци су заштићени и биће коришћени само за потребе процене ризика
-                                </span>
+                                </div>
+                                <h2 className="text-3xl font-bold text-slate-800 mb-2">
+                                    Избор правног лица
+                                </h2>
+                                <p className="text-slate-600">
+                                    Изаберите постојеће правно лице или креирајте ново
+                                </p>
+                            </div>
+
+                            <div className="grid md:grid-cols-2 gap-8 mb-8">
+                                {/* Option 1: Select Existing */}
+                                <div className="space-y-4">
+                                    <h3 className="text-xl font-semibold text-slate-800 flex items-center">
+                                        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 mr-2 text-sm">1</span>
+                                        Постојеће правно лице
+                                    </h3>
+                                    <div className="space-y-3">
+                                        <select
+                                            value={selectedEntityId || ''}
+                                            onChange={(e) => setSelectedEntityId(Number(e.target.value))}
+                                            className="w-full p-4 border border-slate-300 rounded-xl text-black bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 text-base font-medium appearance-none cursor-pointer hover:border-blue-400"
+                                            disabled={loadingEntities || existingPravnaLica.length === 0}
+                                        >
+                                            <option value="">
+                                                {loadingEntities ? 'Учитавање...' : existingPravnaLica.length === 0 ? 'Нема постојећих правних лица' : 'Изаберите правно лице...'}
+                                            </option>
+                                            {existingPravnaLica.map(pl => (
+                                                <option key={pl.id} value={pl.id}>
+                                                    {pl.naziv}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <button
+                                            onClick={handleSelectExisting}
+                                            disabled={!selectedEntityId || creatingProcena}
+                                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg flex items-center justify-center"
+                                        >
+                                            {creatingProcena ? (
+                                                <>
+                                                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    Креирање...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    Настави са изабраним
+                                                    <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                                    </svg>
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Divider */}
+                                <div className="flex items-center justify-center md:hidden">
+                                    <div className="w-full h-px bg-slate-200"></div>
+                                    <span className="px-4 text-slate-500 font-medium">ИЛИ</span>
+                                    <div className="w-full h-px bg-slate-200"></div>
+                                </div>
+
+                                {/* Option 2: Create New */}
+                                <div className="space-y-4 border-l border-slate-200 pl-0 md:pl-8">
+                                    <h3 className="text-xl font-semibold text-slate-800 flex items-center">
+                                        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 text-green-600 mr-2 text-sm">2</span>
+                                        Ново правно лице
+                                    </h3>
+                                    <p className="text-slate-600 text-sm mb-4">
+                                        Уколико правно лице не постоји у регистру, можете га креирати овде.
+                                    </p>
+                                    <button
+                                        onClick={() => setSelectionMode('new')}
+                                        className="w-full bg-white border-2 border-dashed border-green-500 hover:bg-green-50 text-green-600 font-bold py-4 px-6 rounded-xl transition-all duration-200 flex items-center justify-center group"
+                                    >
+                                        <svg className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                                        </svg>
+                                        Креирај ново правно лице
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </form>
+                    ) : (
+                        <div className="space-y-4">
+                            <button
+                                onClick={() => setSelectionMode('select')}
+                                className="flex items-center text-slate-600 hover:text-blue-600 transition-colors font-medium"
+                            >
+                                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                                Назад на избор
+                            </button>
+                            <LegalEntityForm
+                                onSuccess={(data) => {
+                                    // Sačuvaj podatke o pravnom licu
+                                    setPravnoLice({
+                                        id: data.pravnoLiceId,
+                                        naziv: data.pravnoLice.naziv,
+                                        pib: data.pravnoLice.pib,
+                                        adresa: data.pravnoLice.adresa
+                                    });
+
+                                    // Postavi procena ID i pređi na sledeći korak
+                                    setProcenaId(data.procenaId.toString());
+                                    setStep('procena');
+                                }}
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
         );
@@ -345,25 +218,15 @@ export default function OptimizedRiskPage() {
 
     // Korak 2: Optimizovana procena rizika
     return (
-        <OptimizedRiskAssessment 
-            procenaId={procenaId} 
+        <OptimizedRiskAssessment
+            procenaId={procenaId}
             pravnoLice={pravnoLice}
             onNewAssessment={() => {
                 setStep('pravno-lice');
                 setProcenaId('');
                 setPravnoLice(null);
-                setNaziv('');
-                setSkracenoPoslovnoIme('');
-                setPib('');
-                setMaticniBroj('');
-                setAdresaSediste('');
-                setAdresaOstala('');
-                setSifraDelatnosti('');
-                setLiceZastupanje('');
-                setLiceKomunikacija('');
-                setTimProcenaRizika('');
-                setTelefonFaks('');
-                setInternetAdresa('');
+                setSelectionMode('select');
+                setSelectedEntityId(null);
             }}
         />
     );

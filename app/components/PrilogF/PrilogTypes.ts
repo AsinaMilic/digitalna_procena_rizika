@@ -25,7 +25,7 @@ export interface PrilogFData {
 
     f4_identifikacija: string; // Simplified for now, can be complex obj if needed but screenshots look like free text or reference to other headers
     f4_analiza: string;
-    f4_vrednovanje: any; // JSONB
+    f4_vrednovanje: string; // JSONB
     f6_zakljucak: {
         tacka_1: string;
         tacka_2: string;

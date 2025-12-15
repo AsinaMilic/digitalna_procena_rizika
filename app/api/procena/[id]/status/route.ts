@@ -3,11 +3,11 @@ import { getDbConnection } from '../../../../../lib/db';
 
 export async function PUT(
     request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
         const { status } = await request.json();
-        const { id } = await params;
+        const { id } = await context.params;
         const procenaId = id;
 
         if (!status) {
@@ -27,7 +27,7 @@ export async function PUT(
         }
 
         const pool = await getDbConnection();
-        
+
         // Ažuriraj status procene
         const result = await pool.query(`
                 UPDATE ProcenaRizika 
@@ -42,9 +42,9 @@ export async function PUT(
             );
         }
 
-        return NextResponse.json({ 
-            success: true, 
-            message: 'Status je uspešno ažuriran' 
+        return NextResponse.json({
+            success: true,
+            message: 'Status je uspešno ažuriran'
         });
 
     } catch (error) {

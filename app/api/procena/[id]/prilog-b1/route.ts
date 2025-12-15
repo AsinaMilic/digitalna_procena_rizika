@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getDbConnection } from '../../../../../lib/db';
+import { ProcenaRouteContext } from '../../../types';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+    context: ProcenaRouteContext
 ) {
     try {
-        const { id: procenaId } = await params;
-        const { getDbConnection } = await import('../../../../../lib/db');
+        const { id: procenaId } = await context.params;
+
         const pool = await getDbConnection();
 
         const result = await pool.query(`
@@ -24,12 +26,12 @@ export async function GET(
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+    context: ProcenaRouteContext
 ) {
     try {
-        const { id: procenaId } = await params;
+        const { id: procenaId } = await context.params;
         const { groupId, uticaj } = await request.json();
-        const { getDbConnection } = await import('../../../../../lib/db');
+
         const pool = await getDbConnection();
 
         // Server-side calculation

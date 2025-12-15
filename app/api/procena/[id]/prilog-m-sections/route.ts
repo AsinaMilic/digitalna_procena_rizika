@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDbConnection } from '../../../../../lib/db';
+import { ProcenaRouteContext } from '../../../types';
 
 // GET - Učitaj sekcijske podatke za Prilog M
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: ProcenaRouteContext
 ) {
   try {
-    const procenaId = parseInt(params.id);
-    
+    const { id } = await context.params;
+    const procenaId = parseInt(id);
+
     if (isNaN(procenaId)) {
       return NextResponse.json(
         { error: 'Nevaljan ID procene' },
@@ -48,11 +50,12 @@ export async function GET(
 // POST - Sačuvaj ili ažuriraj sekcijske podatke
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: ProcenaRouteContext
 ) {
   try {
-    const procenaId = parseInt(params.id);
-    
+    const { id } = await context.params;
+    const procenaId = parseInt(id);
+
     if (isNaN(procenaId)) {
       return NextResponse.json(
         { error: 'Nevaljan ID procene' },
@@ -65,7 +68,7 @@ export async function POST(
 
     // Počni transakciju
     const client = await pool.connect();
-    
+
     try {
       await client.query('BEGIN');
 

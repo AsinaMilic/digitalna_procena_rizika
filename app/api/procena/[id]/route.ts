@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDbConnection } from '../../../../lib/db';
+import { ProcenaRouteContext } from '../../types';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+    context: ProcenaRouteContext
 ) {
     try {
-        const { id } = await params;
+        const { id } = await context.params;
         const procenaId = id;
         const pool = await getDbConnection();
 
@@ -44,16 +45,16 @@ export async function GET(
 
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+    context: ProcenaRouteContext
 ) {
     try {
-        const { id } = await params;
+        const { id } = await context.params;
         const procenaId = id;
         const pool = await getDbConnection();
 
         // Start transaction
         const client = await pool.connect();
-        
+
         try {
             await client.query('BEGIN');
 
@@ -96,11 +97,11 @@ export async function DELETE(
 
 export async function PUT(
     request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+    context: ProcenaRouteContext
 ) {
     try {
         const { status } = await request.json();
-        const { id } = await params;
+        const { id } = await context.params;
         const procenaId = id;
 
         if (!status) {

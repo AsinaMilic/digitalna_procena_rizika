@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ProcenaRouteContext } from '../../../types';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+    context: ProcenaRouteContext
 ) {
     try {
+        const { params } = context;
         const { id: procenaId } = await params;
         const { getDbConnection } = await import('../../../../../lib/db');
         const pool = await getDbConnection();
@@ -24,9 +26,10 @@ export async function GET(
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+    context: ProcenaRouteContext
 ) {
     try {
+        const { params } = context;
         const { id: procenaId } = await params;
         const { groupId, itemId, vrednost } = await request.json();
         const { getDbConnection } = await import('../../../../../lib/db');

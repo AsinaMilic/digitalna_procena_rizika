@@ -40,6 +40,52 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice, readOnl
     const [showFinancialForm, setShowFinancialForm] = useState(false);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+    const calculateStatistics = useCallback((prilogMData: Map<string, PrilogMData[]>) => {
+        let totalItems = 0;
+        let completedItems = 0;
+        let highRiskItems = 0;
+        const riskCategories = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
+        // Izračunaj ukupan broj stavki iz svih grupa
+        RISK_GROUPS.forEach(group => {
+            const groupData = getRiskGroupData(group.id);
+            if (groupData) {
+                groupData.risks.forEach(risk => {
+                    totalItems += risk.items.length;
+                });
+            }
+        });
+
+        // Izračunaj statistike iz Prilog M podataka - samo jedinstvene stavke
+        const uniqueCompletedItems = new Set<string>();
+
+        prilogMData.forEach(groupData => {
+            groupData.forEach(item => {
+                // Dodaj u set za jedinstvene stavke
+                uniqueCompletedItems.add(item.id);
+
+                if (item.kategorijaRizika) {
+                    riskCategories[item.kategorijaRizika as keyof typeof riskCategories]++;
+                }
+
+                if (item.kategorijaRizika === 1 || item.kategorijaRizika === 2) {
+                    highRiskItems++;
+                }
+            });
+        });
+
+        completedItems = uniqueCompletedItems.size;
+        const completionPercentage = totalItems > 0 ? Math.min(100, Math.round((completedItems / totalItems) * 100)) : 0;
+
+        setStatistics({
+            totalItems,
+            completedItems,
+            completionPercentage,
+            highRiskItems,
+            riskCategories
+        });
+    }, []);
+
     // Učitaj postojeće podatke pri inicijalizaciji - samo jednom
     useEffect(() => {
         const loadAllData = async () => {
@@ -168,53 +214,9 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice, readOnl
         };
 
         loadAllData();
-    }, [procenaId]); // Only depend on procenaId, which should be stable
+    }, [procenaId, calculateStatistics]); // Only depend on procenaId, which should be stable
 
-    const calculateStatistics = (prilogMData: Map<string, PrilogMData[]>) => {
-        let totalItems = 0;
-        let completedItems = 0;
-        let highRiskItems = 0;
-        const riskCategories = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
 
-        // Izračunaj ukupan broj stavki iz svih grupa
-        RISK_GROUPS.forEach(group => {
-            const groupData = getRiskGroupData(group.id);
-            if (groupData) {
-                groupData.risks.forEach(risk => {
-                    totalItems += risk.items.length;
-                });
-            }
-        });
-
-        // Izračunaj statistike iz Prilog M podataka - samo jedinstvene stavke
-        const uniqueCompletedItems = new Set<string>();
-
-        prilogMData.forEach(groupData => {
-            groupData.forEach(item => {
-                // Dodaj u set za jedinstvene stavke
-                uniqueCompletedItems.add(item.id);
-
-                if (item.kategorijaRizika) {
-                    riskCategories[item.kategorijaRizika as keyof typeof riskCategories]++;
-                }
-
-                if (item.kategorijaRizika === 1 || item.kategorijaRizika === 2) {
-                    highRiskItems++;
-                }
-            });
-        });
-
-        completedItems = uniqueCompletedItems.size;
-        const completionPercentage = totalItems > 0 ? Math.min(100, Math.round((completedItems / totalItems) * 100)) : 0;
-
-        setStatistics({
-            totalItems,
-            completedItems,
-            completionPercentage,
-            highRiskItems,
-            riskCategories
-        });
-    };
 
     // Callback za ažuriranje selekcija
     const handleSelectionChange = useCallback((groupId: string, selections: RiskSelection[]) => {
@@ -233,7 +235,7 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice, readOnl
             calculateStatistics(newMap);
             return newMap;
         });
-    }, []);
+    }, [calculateStatistics]);
 
     // Create stable callbacks for the active group - use ref to avoid recreating
     const activeGroupIdRef = useRef(activeGroupId);

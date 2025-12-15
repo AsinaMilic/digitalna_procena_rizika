@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import NextImage from "next/image";
 
 interface CriteriaModalProps {
     onClose: () => void;
@@ -23,16 +24,26 @@ export default function CriteriaModal({ onClose }: CriteriaModalProps) {
                     </div>
 
                     <div className="space-y-4">
-                        <img
-                            src="/assets/prilog-f/criteria_1.png"
-                            alt="Criteria 1"
-                            className="w-full h-auto border border-gray-300 rounded"
-                        />
-                        <img
-                            src="/assets/prilog-f/criteria_2.png"
-                            alt="Criteria 2"
-                            className="w-full h-auto border border-gray-300 rounded"
-                        />
+                        <div className="relative w-full">
+                            <NextImage
+                                src="/assets/prilog-f/criteria_1.png"
+                                alt="Criteria 1"
+                                width={0}
+                                height={0}
+                                sizes="100vw"
+                                className="w-full h-auto border border-gray-300 rounded"
+                            />
+                        </div>
+                        <div className="relative w-full">
+                            <NextImage
+                                src="/assets/prilog-f/criteria_2.png"
+                                alt="Criteria 2"
+                                width={0}
+                                height={0}
+                                sizes="100vw"
+                                className="w-full h-auto border border-gray-300 rounded"
+                            />
+                        </div>
                     </div>
 
                     <div className="mt-4 text-center">

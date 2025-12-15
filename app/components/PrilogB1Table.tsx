@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 
 interface PrilogB1Data {
     id?: number;
@@ -57,7 +57,17 @@ export default function PrilogB1Table({ procenaId, readOnly = false }: PrilogB1T
                 if (response.ok) {
                     const savedData = await response.json();
                     // Merge saved data
-                    savedData.forEach((item: any) => {
+                    // Merge saved data
+                    interface SavedB1Item {
+                        group_id: number;
+                        id: number;
+                        uticaj: string;
+                        iud: string;
+                        vk: number | null;
+                        k: number | null;
+                    }
+
+                    savedData.forEach((item: SavedB1Item) => {
                         const index = initialData.findIndex(d => d.groupId === item.group_id);
                         if (index !== -1) {
                             initialData[index] = {

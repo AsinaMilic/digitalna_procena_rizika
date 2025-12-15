@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDbConnection } from '@/lib/db';
+import { ProcenaRouteContext } from '../../../types';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+    context: ProcenaRouteContext
 ) {
     try {
+        const { params } = context;
         const { id: procenaId } = await params;
         const pool = await getDbConnection();
 
@@ -26,9 +28,10 @@ export async function GET(
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+    context: ProcenaRouteContext
 ) {
     try {
+        const { params } = context;
         const { id: procenaId } = await params;
         const body = await request.json();
         const pool = await getDbConnection();

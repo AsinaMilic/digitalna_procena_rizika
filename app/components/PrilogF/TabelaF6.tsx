@@ -4,7 +4,7 @@ import { PrilogFData } from "./PrilogTypes";
 
 interface TabelaF6Props {
     data: PrilogFData;
-    onChange: (field: keyof PrilogFData, value: any) => void;
+    onChange: (field: keyof PrilogFData, value: PrilogFData[keyof PrilogFData]) => void;
     readOnly?: boolean;
 }
 

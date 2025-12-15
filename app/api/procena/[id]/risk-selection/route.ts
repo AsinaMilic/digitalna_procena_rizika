@@ -1,9 +1,9 @@
-import {NextResponse} from "next/server";
-import {getDbConnection} from "../../../../../lib/db";
+import { NextResponse } from "next/server";
+import { getDbConnection } from "../../../../../lib/db";
 
 async function executeWithRetry<T>(operation: () => Promise<T>, maxRetries = 3): Promise<T> {
     let lastError: Error = new Error('Unknown error');
-    
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             return await operation();
@@ -11,7 +11,7 @@ async function executeWithRetry<T>(operation: () => Promise<T>, maxRetries = 3):
             lastError = error as Error;
             const err = error as { code?: string; message: string };
             console.log(`Attempt ${attempt} failed:`, err.message);
-            
+
             if (attempt < maxRetries && (err.code === 'ECONNCLOSED' || err.code === 'ENOTOPEN')) {
                 console.log(`Retrying in ${attempt * 1000}ms...`);
                 await new Promise(resolve => setTimeout(resolve, attempt * 1000));
@@ -20,7 +20,7 @@ async function executeWithRetry<T>(operation: () => Promise<T>, maxRetries = 3):
             break;
         }
     }
-    
+
     throw lastError;
 }
 
@@ -28,14 +28,16 @@ export async function OPTIONS() {
     return new NextResponse(null, { status: 200 });
 }
 
-export async function POST(req: Request, {params}: {params: Promise<{id: string}>}) {
+export async function POST(req: Request,
+    context: { params: Promise<{ id: string }> }
+) {
     try {
-        const {id} = await params;
+        const { id } = await context.params;
         const procenaId = parseInt(id);
-        const {risk_id, danger_level, description} = await req.json();
+        const { risk_id, danger_level, description } = await req.json();
 
         if (!procenaId || !risk_id || !danger_level) {
-            return NextResponse.json({error: "Nedostaju potrebni podaci"}, {status: 400});
+            return NextResponse.json({ error: "Nedostaju potrebni podaci" }, { status: 400 });
         }
 
         await executeWithRetry(async () => {
@@ -67,26 +69,28 @@ export async function POST(req: Request, {params}: {params: Promise<{id: string}
             }
         });
 
-        return NextResponse.json({success: true});
+        return NextResponse.json({ success: true });
     } catch (error: unknown) {
         console.error("Greška pri čuvanju selekcije rizika:", error);
         const err = error as Error;
-        
+
         if (err.message === "Procena ne postoji") {
-            return NextResponse.json({error: "Procena ne postoji"}, {status: 404});
+            return NextResponse.json({ error: "Procena ne postoji" }, { status: 404 });
         }
-        
-        return NextResponse.json({error: "Greška pri čuvanju podataka"}, {status: 500});
+
+        return NextResponse.json({ error: "Greška pri čuvanju podataka" }, { status: 500 });
     }
 }
 
-export async function GET(req: Request, {params}: {params: Promise<{id: string}>}) {
+export async function GET(req: Request,
+    context: { params: Promise<{ id: string }> }
+) {
     try {
-        const {id} = await params;
+        const { id } = await context.params;
         const procenaId = parseInt(id);
 
         if (!procenaId) {
-            return NextResponse.json({error: "Nevaljan ID procene"}, {status: 400});
+            return NextResponse.json({ error: "Nevaljan ID procene" }, { status: 400 });
         }
 
         const result = await executeWithRetry(async () => {
@@ -104,6 +108,6 @@ export async function GET(req: Request, {params}: {params: Promise<{id: string}>
         return NextResponse.json(mappedRows);
     } catch (error) {
         console.error("Greška pri dohvatanju selekcija rizika:", error);
-        return NextResponse.json({error: "Greška pri dohvatanju podataka"}, {status: 500});
+        return NextResponse.json({ error: "Greška pri dohvatanju podataka" }, { status: 500 });
     }
 }

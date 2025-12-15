@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrilogMData, calculateStvarnaSteta, calculateVerovatnoMaksimalnaSteta } from '../../../../data/riskDataLoader';
 import { getDbConnection } from '../../../../../lib/db';
+import { ProcenaRouteContext } from '../../../types';
 
 async function executeWithRetry<T>(operation: () => Promise<T>, maxRetries = 3): Promise<T> {
   let lastError: Error = new Error('Unknown error');
@@ -31,10 +32,10 @@ export async function OPTIONS() {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: ProcenaRouteContext
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const procenaId = parseInt(id);
     const prilogMItem: PrilogMData = await request.json();
 
@@ -175,10 +176,10 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: ProcenaRouteContext
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const procenaId = parseInt(id);
 
     if (!procenaId) {
@@ -217,10 +218,10 @@ export async function GET(
 // Endpoint za dobijanje agregiranih statistika
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: ProcenaRouteContext
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const procenaId = parseInt(id);
     const url = new URL(request.url);
     const itemId = url.searchParams.get('itemId');
@@ -233,7 +234,7 @@ export async function PATCH(
     // Validacija polja
     const allowedFields = ['posledice', 'steta', 'opisIdentifikovanihRizika'];
     const updateFields = Object.keys(updateData).filter(field => allowedFields.includes(field));
-    
+
     if (updateFields.length === 0) {
       return NextResponse.json({ error: 'Nema validnih polja za ažuriranje' }, { status: 400 });
     }
@@ -244,15 +245,15 @@ export async function PATCH(
       if (field === 'opisIdentifikovanihRizika') {
         // Za opis, proveravamo da li je string
         if (typeof value !== 'string') {
-          return NextResponse.json({ 
-            error: `Vrednost za ${field} mora biti tekst` 
+          return NextResponse.json({
+            error: `Vrednost za ${field} mora biti tekst`
           }, { status: 400 });
         }
       } else {
         // Za numerička polja (posledice, steta)
         if (typeof value !== 'number' || value < 1 || value > 5) {
-          return NextResponse.json({ 
-            error: `Vrednost za ${field} mora biti broj između 1 i 5` 
+          return NextResponse.json({
+            error: `Vrednost za ${field} mora biti broj između 1 i 5`
           }, { status: 400 });
         }
       }
@@ -263,7 +264,7 @@ export async function PATCH(
 
       // Proveri da li stavka postoji
       const existingRecord = await pool.query(
-        'SELECT * FROM PrilogM WHERE procenaId = $1 AND itemId = $2', 
+        'SELECT * FROM PrilogM WHERE procenaId = $1 AND itemId = $2',
         [procenaId, itemId]
       );
 
@@ -316,10 +317,10 @@ export async function PATCH(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: ProcenaRouteContext
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const procenaId = parseInt(id);
 
     if (!procenaId) {

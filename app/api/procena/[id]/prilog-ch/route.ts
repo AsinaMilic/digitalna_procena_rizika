@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getDbConnection } from '../../../../../lib/db';
+import { ProcenaRouteContext } from '../../../types';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+    context: ProcenaRouteContext
 ) {
     try {
-        const { id: procenaId } = await params;
-        const { getDbConnection } = await import('../../../../../lib/db');
+        const { id: procenaId } = await context.params;
+
         const pool = await getDbConnection();
 
         // Fetch Prilog CH data
@@ -33,15 +35,15 @@ export async function GET(
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+    context: ProcenaRouteContext
 ) {
     try {
-        const { id: procenaId } = await params;
+        const { id: procenaId } = await context.params;
         const {
             zahtev_a, zahtev_b, zahtev_v, zahtev_g, zahtev_d, zahtev_dj
         } = await request.json();
 
-        const { getDbConnection } = await import('../../../../../lib/db');
+
         const pool = await getDbConnection();
 
         // 1. Get Resource Score from Prilog T

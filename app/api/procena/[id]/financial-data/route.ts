@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDbConnection } from '../../../../../lib/db';
+import { ProcenaRouteContext } from '../../../types';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: ProcenaRouteContext
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const procenaId = parseInt(id);
     const financialData = await request.json();
 
@@ -46,15 +47,15 @@ export async function POST(
 }
 
 export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  request: NextRequest,
+  context: ProcenaRouteContext
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const procenaId = parseInt(id);
 
     const pool = await getDbConnection();
-    
+
     const result = await pool.query(`
       SELECT poslovniPrihodi, vrednostImovine, delatnost, stvarnaSteta
       FROM FinancialData 

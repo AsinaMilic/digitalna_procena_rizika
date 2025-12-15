@@ -62,7 +62,7 @@ export default function PrilogUTable({ procenaId, readOnly = false, onScoreUpdat
         if (procenaId) {
             fetchData();
         }
-    }, [procenaId]);
+    }, [procenaId, onScoreUpdate]);
 
     const handleScoreChange = async (field: keyof TableUData, value: number) => {
         const newData = { ...data, [field]: value };
@@ -118,7 +118,7 @@ export default function PrilogUTable({ procenaId, readOnly = false, onScoreUpdat
                             </td>
                         </tr>
 
-                        {REQ_CONFIG.slice(0, 2).map((req, index) => (
+                        {REQ_CONFIG.slice(0, 2).map((req) => (
                             <tr key={req.key} className="bg-white">
                                 <td className="border p-2">{req.label}</td>
                                 <td className="border p-2 text-center">
@@ -146,7 +146,7 @@ export default function PrilogUTable({ procenaId, readOnly = false, onScoreUpdat
                             </td>
                         </tr>
 
-                        {REQ_CONFIG.slice(2).map((req, index) => (
+                        {REQ_CONFIG.slice(2).map((req) => (
                             <tr key={req.key} className="bg-white">
                                 <td className="border p-2">{req.label}</td>
                                 <td className="border p-2 text-center">
