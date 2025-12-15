@@ -408,6 +408,42 @@ export async function initializeDatabase() {
       )
     `);
 
+    // Kreiranje tabele OrganizacijaProceneRizika - Podaci o organizaciji koja vrši procenu
+    await pool.query(`
+      CREATE TABLE OrganizacijaProceneRizika (
+        id SERIAL PRIMARY KEY,
+        pravnoLiceId INTEGER NOT NULL REFERENCES PravnoLice(id) ON DELETE CASCADE,
+        
+        -- a) Podaci o organizaciji
+        poslovno_ime VARCHAR(255) DEFAULT 'SECURITAS SERVICES d.o.o.',
+        adresa_sediste VARCHAR(500) DEFAULT 'Autoput za Zagreb br. 18, 11080 Beograd, Zemun',
+        maticni_broj VARCHAR(20) DEFAULT '17487809',
+        pib VARCHAR(20) DEFAULT '102941341',
+        broj_licence VARCHAR(100) DEFAULT '03.15.3 broj 6025 od 03.11.2021. godine',
+        
+        -- b) Menadžer rizika - vođa tima
+        menadzer_ime VARCHAR(255) DEFAULT 'Lazar Mladinović, dipl. inž. ZOP i specijalista kriminalista',
+        menadzer_licence VARCHAR(100) DEFAULT '03.27 broj 20771 od 18.07.2022. godine',
+        
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(pravnoLiceId)
+      )
+    `);
+
+    // Kreiranje tabele ClanoviTimaProceneRizika - Članovi tima za procenu rizika
+    await pool.query(`
+      CREATE TABLE ClanoviTimaProceneRizika (
+        id SERIAL PRIMARY KEY,
+        organizacijaId INTEGER NOT NULL REFERENCES OrganizacijaProceneRizika(id) ON DELETE CASCADE,
+        ime VARCHAR(255) NOT NULL,
+        broj_licence VARCHAR(100) NOT NULL,
+        redni_broj INTEGER DEFAULT 1,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Kreiranje indeksa
     await pool.query(`
       CREATE INDEX idx_pravno_lice_maticni_broj ON PravnoLice(maticni_broj);

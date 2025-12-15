@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import OrganizacijaProceneForm from '../components/OrganizacijaProceneForm';
 
 interface ProcenaRizika {
     id: number;
@@ -523,6 +524,14 @@ export default function PravnaLicaPage() {
                                                     </button>
                                                 </div>
                                             </div>
+                                        </div>
+
+                                        {/* Sekcija 1.3 - Organizacija koja vrsi procenu rizika */}
+                                        <div className="mb-4">
+                                            <OrganizacijaProceneForm
+                                                pravnoLiceId={pravnoLice.id}
+                                                onSave={() => fetchPravnaLica()}
+                                            />
                                         </div>
 
                                         {/* Sekcija za naziv usluge i datum izrade */}
