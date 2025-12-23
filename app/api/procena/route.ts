@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDbConnection } from '../../../lib/db';
+import { handleApiError } from '../../../lib/api-error';
 
 export async function GET() {
     try {
         const pool = await getDbConnection();
-        
+
         // Dobij sve procene sa podacima o pravnom licu
         const result = await pool.query(`
             SELECT 
@@ -25,18 +26,14 @@ export async function GET() {
 
         return NextResponse.json(result.rows);
     } catch (error) {
-        console.error('Greška pri dobijanju procena:', error);
-        return NextResponse.json(
-            { error: 'Greška pri dobijanju procena' },
-            { status: 500 }
-        );
+        return handleApiError(error, "dobijanje procena");
     }
 }
 
 export async function POST(request: NextRequest) {
     try {
         const { pravnoLiceId } = await request.json();
-        
+
         if (!pravnoLiceId) {
             return NextResponse.json(
                 { error: 'pravnoLiceId je obavezan' },
@@ -45,7 +42,7 @@ export async function POST(request: NextRequest) {
         }
 
         const pool = await getDbConnection();
-        
+
         // Proveri da li već postoji aktivna procena za ovo pravno lice
         const existingAssessment = await pool.query(`
             SELECT id, status FROM ProcenaRizika 
@@ -60,19 +57,19 @@ export async function POST(request: NextRequest) {
                 existingProcenaId: existingAssessment.rows[0].id
             }, { status: 400 });
         }
-        
+
         // Get the legal entity name for the assessment title
         const pravnoLiceResult = await pool.query('SELECT naziv FROM PravnoLice WHERE id = $1', [pravnoLiceId]);
-        
+
         if (pravnoLiceResult.rows.length === 0) {
             return NextResponse.json(
                 { error: 'Pravno lice sa datim ID ne postoji' },
                 { status: 404 }
             );
         }
-        
+
         const pravnoLiceNaziv = pravnoLiceResult.rows[0].naziv;
-        
+
         // Kreiraj novu procenu
         const result = await pool.query(`
                 INSERT INTO ProcenaRizika (naziv, pravnoLiceId, status)
@@ -90,18 +87,14 @@ export async function POST(request: NextRequest) {
             status: novaProcena.status
         });
     } catch (error) {
-        console.error('Greška pri kreiranju procene:', error);
-        return NextResponse.json(
-            { error: 'Greška pri kreiranju procene' },
-            { status: 500 }
-        );
+        return handleApiError(error, "kreiranje procene");
     }
 }
 
 export async function PUT(request: NextRequest) {
     try {
         const { procenaId, naziv_usluge, datum_izrade } = await request.json();
-        
+
         if (!procenaId) {
             return NextResponse.json(
                 { error: 'procenaId je obavezan' },
@@ -110,7 +103,7 @@ export async function PUT(request: NextRequest) {
         }
 
         const pool = await getDbConnection();
-        
+
         // Ažuriraj procenu sa novim podacima
         const result = await pool.query(`
             UPDATE ProcenaRizika 
@@ -132,10 +125,6 @@ export async function PUT(request: NextRequest) {
             data: result.rows[0]
         });
     } catch (error) {
-        console.error('Greška pri ažuriranju procene:', error);
-        return NextResponse.json(
-            { error: 'Greška pri ažuriranju procene' },
-            { status: 500 }
-        );
+        return handleApiError(error, "ažuriranje procene");
     }
 }

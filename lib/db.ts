@@ -115,7 +115,7 @@ export async function initializeDatabase() {
         adresa VARCHAR(500),
         adresa_sediste VARCHAR(500),
         adresa_ostala TEXT,
-        sifra_delatnosti VARCHAR(20),
+        sifra_delatnosti VARCHAR(255),
         lice_zastupanje TEXT,
         lice_komunikacija TEXT,
         tim_procena_rizika TEXT,

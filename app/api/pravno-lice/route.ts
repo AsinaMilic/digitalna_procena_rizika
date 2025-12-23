@@ -1,12 +1,13 @@
-import {NextResponse} from "next/server";
-import {getDbConnection} from "../../../lib/db";
+import { NextResponse } from "next/server";
+import { getDbConnection } from "../../../lib/db";
+import { handleApiError } from "../../../lib/api-error";
 
 export async function POST(req: Request) {
     try {
         const {
-            naziv, 
+            naziv,
             skraceno_poslovno_ime,
-            pib, 
+            pib,
             maticni_broj,
             adresa_sediste,
             adresa_ostala,
@@ -19,20 +20,20 @@ export async function POST(req: Request) {
             // Zadržavamo staru adresu za kompatibilnost
             adresa
         } = await req.json();
-        
+
         if (!naziv || !pib) {
-            return NextResponse.json({error: "Naziv i PIB su obavezni"}, {status: 400});
+            return NextResponse.json({ error: "Naziv i PIB su obavezni" }, { status: 400 });
         }
 
         const pool = await getDbConnection();
 
         // Check if legal entity with this PIB already exists
         const existingEntity = await pool.query('SELECT id, naziv FROM PravnoLice WHERE pib = $1', [pib]);
-        
+
         if (existingEntity.rows.length > 0) {
             return NextResponse.json({
                 error: `Pravno lice sa PIB ${pib} već postoji (${existingEntity.rows[0].naziv})`
-            }, {status: 400});
+            }, { status: 400 });
         }
 
         // Check if legal entity with this matični broj already exists (if provided)
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
             if (existingMaticni.rows.length > 0) {
                 return NextResponse.json({
                     error: `Pravno lice sa matičnim brojem ${maticni_broj} već postoji (${existingMaticni.rows[0].naziv})`
-                }, {status: 400});
+                }, { status: 400 });
             }
         }
 
@@ -67,22 +68,22 @@ export async function POST(req: Request) {
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                 RETURNING id
             `, [
-                naziv, 
-                skraceno_poslovno_ime || null,
-                pib, 
-                maticni_broj || null,
-                adresa || adresa_sediste || null, // Kompatibilnost sa starom adresom
-                adresa_sediste || null,
-                adresa_ostala || null,
-                sifra_delatnosti || null,
-                lice_zastupanje || null,
-                lice_komunikacija || null,
-                tim_procena_rizika || null,
-                telefon_faks || null, // Stara kolona telefon
-                telefon_faks || null,
-                internet_adresa || null,
-                null // email - zadržavamo null za sada
-            ]);
+            naziv,
+            skraceno_poslovno_ime || null,
+            pib,
+            maticni_broj || null,
+            adresa || adresa_sediste || null, // Kompatibilnost sa starom adresom
+            adresa_sediste || null,
+            adresa_ostala || null,
+            sifra_delatnosti || null,
+            lice_zastupanje || null,
+            lice_komunikacija || null,
+            tim_procena_rizika || null,
+            telefon_faks || null, // Stara kolona telefon
+            telefon_faks || null,
+            internet_adresa || null,
+            null // email - zadržavamo null za sada
+        ]);
 
         const pravnoLiceId = pravnoLiceResult.rows[0].id;
 
@@ -96,34 +97,19 @@ export async function POST(req: Request) {
         const procenaId = procenaResult.rows[0].id;
 
         return NextResponse.json({
-            success: true, 
+            success: true,
             pravnoLiceId: pravnoLiceId,
             procenaId: procenaId
         });
     } catch (error) {
-        console.error("Greška pri kreiranju pravnog lica:", error);
-        
-        // Handle specific PostgreSQL errors
-        if (error && typeof error === 'object' && 'code' in error) {
-            const pgError = error as { code: string; constraint?: string };
-            
-            if (pgError.code === '23505' && pgError.constraint === 'pravnolice_pib_key') {
-                return NextResponse.json({
-                    error: "Pravno lice sa ovim PIB brojem već postoji"
-                }, {status: 400});
-            }
-        }
-        
-        return NextResponse.json({
-            error: "Greška pri čuvanju podataka"
-        }, {status: 500});
+        return handleApiError(error, "kreiranje pravnog lica");
     }
 }
 
 export async function GET() {
     try {
         const pool = await getDbConnection();
-        
+
         const result = await pool.query(`
             SELECT 
                 pl.id,
@@ -157,7 +143,7 @@ export async function GET() {
 
         // Group the results by pravno lice
         const pravnaLicaMap = new Map();
-        
+
         result.rows.forEach(row => {
             if (!pravnaLicaMap.has(row.id)) {
                 pravnaLicaMap.set(row.id, {
@@ -181,9 +167,9 @@ export async function GET() {
                     usluge: []
                 });
             }
-            
+
             const pravnoLice = pravnaLicaMap.get(row.id);
-            
+
             // Dodaj procenu ako postoji i nije već dodana
             if (row.procenaid && !pravnoLice.procene.find((p: { id: number }) => p.id === row.procenaid)) {
                 pravnoLice.procene.push({
@@ -193,7 +179,7 @@ export async function GET() {
                     pravnoLiceId: row.id
                 });
             }
-            
+
             // Dodaj uslugu ako postoji i nije već dodana
             if (row.uslugaid && !pravnoLice.usluge.find((u: { id: number }) => u.id === row.uslugaid)) {
                 pravnoLice.usluge.push({
@@ -208,17 +194,16 @@ export async function GET() {
         const pravnaLica = Array.from(pravnaLicaMap.values());
         return NextResponse.json(pravnaLica);
     } catch (error) {
-        console.error("Greška pri dohvatanju pravnih lica:", error);
-        return NextResponse.json({error: "Greška pri dohvatanju podataka"}, {status: 500});
+        return handleApiError(error, "dohvatanje pravnih lica");
     }
 }
 
 export async function PUT(req: Request) {
     try {
         const { pravnoLiceId, naziv_usluge, datum_izrade, opis } = await req.json();
-        
+
         if (!pravnoLiceId || !naziv_usluge) {
-            return NextResponse.json({error: "ID pravnog lica i naziv usluge su obavezni"}, {status: 400});
+            return NextResponse.json({ error: "ID pravnog lica i naziv usluge su obavezni" }, { status: 400 });
         }
 
         const pool = await getDbConnection();
@@ -231,13 +216,12 @@ export async function PUT(req: Request) {
         `, [pravnoLiceId, naziv_usluge, datum_izrade || new Date().toISOString().split('T')[0], opis || null]);
 
         return NextResponse.json({
-            success: true, 
+            success: true,
             message: "Usluga je uspešno dodana",
             uslugaId: result.rows[0].id
         });
     } catch (error) {
-        console.error("Greška pri dodavanju usluge:", error);
-        return NextResponse.json({error: "Greška pri dodavanju usluge"}, {status: 500});
+        return handleApiError(error, "dodavanje usluge");
     }
 }
 
@@ -245,9 +229,9 @@ export async function DELETE(req: Request) {
     try {
         const url = new URL(req.url);
         const id = url.searchParams.get('id');
-        
+
         if (!id) {
-            return NextResponse.json({error: "ID pravnog lica je obavezan"}, {status: 400});
+            return NextResponse.json({ error: "ID pravnog lica je obavezan" }, { status: 400 });
         }
 
         const pool = await getDbConnection();
@@ -257,20 +241,19 @@ export async function DELETE(req: Request) {
         await pool.query('DELETE FROM FinancialData WHERE procenaId IN (SELECT id FROM ProcenaRizika WHERE pravnoLiceId = $1)', [id]);
         await pool.query('DELETE FROM PrilogM WHERE procenaId IN (SELECT id FROM ProcenaRizika WHERE pravnoLiceId = $1)', [id]);
         await pool.query('DELETE FROM RiskSelection WHERE procenaId IN (SELECT id FROM ProcenaRizika WHERE pravnoLiceId = $1)', [id]);
-        
+
         // Obriši procene rizika
         await pool.query('DELETE FROM ProcenaRizika WHERE pravnoLiceId = $1', [id]);
-        
+
         // Zatim obriši pravno lice
         const result = await pool.query('DELETE FROM PravnoLice WHERE id = $1', [id]);
 
         if (result.rowCount === 0) {
-            return NextResponse.json({error: "Pravno lice nije pronađeno"}, {status: 404});
+            return NextResponse.json({ error: "Pravno lice nije pronađeno" }, { status: 404 });
         }
 
-        return NextResponse.json({success: true, message: "Pravno lice je uspešno obrisano"});
+        return NextResponse.json({ success: true, message: "Pravno lice je uspešno obrisano" });
     } catch (error) {
-        console.error("Greška pri brisanju pravnog lica:", error);
-        return NextResponse.json({error: "Greška pri brisanju pravnog lica"}, {status: 500});
+        return handleApiError(error, "brisanje pravnog lica");
     }
 }
