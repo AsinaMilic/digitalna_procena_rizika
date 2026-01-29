@@ -34,23 +34,24 @@ export async function POST(
 
         const pool = await getDbConnection();
 
-        // Server-side calculation
+        // PRAVILNA KALKULACIJA PREMA SRPS A.L2.003:2025
+        // Иуд (Indeks uticaja delatnosti) - decimalna vrednost
+        // Koristi se u formuli: Иво = Иуд × Кво
         const iud = uticaj / 100;
 
-        // Calculate K (Criticality Degree) - Inverse of impact
-        // Logic: Higher impact -> Lower K (Higher Criticality)
-        // K=1 (Vrlo velika), K=5 (Minimalna)
-        let k = 5;
-        if (uticaj > 20) k = 1;
-        else if (uticaj > 15) k = 2;
-        else if (uticaj > 10) k = 3;
-        else if (uticaj > 5) k = 4;
-        else k = 5;
+        // Calculate VK (Veličina kritičnosti) - proporcionalna uticaju
+        // Prema standardu: veći uticaj → veća kritičnost → veća VK
+        let vk = 1;
+        if (uticaj >= 20) vk = 5;      // Vrlo velika kritičnost
+        else if (uticaj >= 15) vk = 4; // Velika kritičnost
+        else if (uticaj >= 10) vk = 3; // Srednja kritičnost
+        else if (uticaj >= 5) vk = 2;  // Mala kritičnost
+        else vk = 1;                   // Minimalna kritičnost
 
-        // Calculate VK (Criticality Magnitude) - Inverse of K
-        // Logic: VK is inversely proportional to K
-        // If K=1, VK=5. If K=5, VK=1.
-        const vk = 6 - k;
+        // Calculate K (Stepen kritičnosti) - inverzno proporcionalan VK
+        // Prema standardu: K = 6 - VK
+        // VK=5 → K=1 (Vrlo velika), VK=1 → K=5 (Minimalna)
+        const k = 6 - vk;
 
         // Proveri da li već postoji zapis
         const existingResult = await pool.query(`
@@ -73,7 +74,12 @@ export async function POST(
             `, [procenaId, groupId, uticaj, iud, vk, k]);
         }
 
-        return NextResponse.json({ success: true, iud, vk, k });
+        return NextResponse.json({ 
+            success: true, 
+            iud, 
+            vk, 
+            k
+        });
     } catch (error) {
         console.error('Greška pri čuvanju Prilog B1 podataka:', error);
         return NextResponse.json({ error: 'Greška pri čuvanju podataka' }, { status: 500 });

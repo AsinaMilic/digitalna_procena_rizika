@@ -190,16 +190,30 @@ export default function PrilogMTable({ prilogMData, onShowDetails, onUpdateItem,
             allItems.reduce((sum, item) => sum + (item.nivoRizika || 0), 0) / allItems.length
         );
 
-        // Determine Category based on P.1
+        // Determine Category based on П.1 - tačno prema tabeli
         let avgKategorija = 5;
-        if (avgNivoRizika >= 20) avgKategorija = 1;
-        else if (avgNivoRizika >= 10) avgKategorija = 2;
-        else if (avgNivoRizika >= 6) avgKategorija = 3;
-        else if (avgNivoRizika >= 3) avgKategorija = 4;
-        else avgKategorija = 5;
+        if ([20, 25].includes(avgNivoRizika)) {
+            avgKategorija = 1; // PRVA - Izrazito veliki
+        } else if ([10, 12, 15, 16].includes(avgNivoRizika)) {
+            avgKategorija = 2; // DRUGA - Veliki rizik
+        } else if ([6, 7, 8, 9].includes(avgNivoRizika)) {
+            avgKategorija = 3; // TREĆA - Umereno veliki
+        } else if ([3, 4, 5].includes(avgNivoRizika)) {
+            avgKategorija = 4; // ČETVRTA - Mali
+        } else if ([1, 2].includes(avgNivoRizika)) {
+            avgKategorija = 5; // PETA - Vrlo mali, zanemarljiv
+        }
 
-        // Determine Acceptability based on P.2
-        const avgPrihvatljivost = avgNivoRizika >= 6 ? 'NEPRIHVATLJIV' : 'PRIHVATLJIV';
+        // Determine Acceptability based on П.2 - tačno prema tabeli
+        const prihvatljiviNivoi = [1, 2, 3, 4, 5];
+        const neprihvatljiviNivoi = [6, 8, 9, 10, 12, 15, 16, 20, 25];
+        
+        let avgPrihvatljivost: 'PRIHVATLJIV' | 'NEPRIHVATLJIV' = 'PRIHVATLJIV';
+        if (neprihvatljiviNivoi.includes(avgNivoRizika)) {
+            avgPrihvatljivost = 'NEPRIHVATLJIV';
+        } else if (prihvatljiviNivoi.includes(avgNivoRizika)) {
+            avgPrihvatljivost = 'PRIHVATLJIV';
+        }
 
         totalData = {
             nivoRizika: avgNivoRizika,
