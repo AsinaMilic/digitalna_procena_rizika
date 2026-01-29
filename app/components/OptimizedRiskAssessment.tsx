@@ -325,7 +325,7 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice, readOnl
                     <div className="flex justify-between items-center mb-6">
                         <div>
                             <h1 className="text-3xl font-bold text-gray-800">
-                                🚀 Optimizovana Procena Rizika
+                                Procena Rizika
                             </h1>
                             <div className="text-gray-600 mt-2 space-y-1">
                                 {pravnoLice && (

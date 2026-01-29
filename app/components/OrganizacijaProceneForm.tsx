@@ -38,10 +38,6 @@ export default function OrganizacijaProceneForm({ pravnoLiceId, onSave }: Organi
     });
     const [clanoviTima, setClanoviTima] = useState<ClanTima[]>([]);
 
-    useEffect(() => {
-        loadData();
-    }, [pravnoLiceId]);
-
     const loadData = async () => {
         try {
             setLoading(true);
@@ -57,6 +53,11 @@ export default function OrganizacijaProceneForm({ pravnoLiceId, onSave }: Organi
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        loadData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pravnoLiceId]);
 
     const handleSave = async () => {
         try {

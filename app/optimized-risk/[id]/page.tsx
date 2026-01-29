@@ -95,7 +95,7 @@ export default function OptimizedRiskByIdPage() {
                             </div>
                             <div>
                                 <h1 className="text-xl font-bold text-gray-800">
-                                    {isEditMode ? '✏️ Уређивање Процене Ризика' : '🚀 Optimizovana Procena Rizika'}
+                                    {isEditMode ? '✏️ Уређивање Процене Ризика' : '🚀 Procena Rizika'}
                                 </h1>
                                 <p className="text-sm text-gray-600">
                                     {pravnoLice ? `${pravnoLice.naziv} | PIB: ${pravnoLice.pib} | ` : ''}
