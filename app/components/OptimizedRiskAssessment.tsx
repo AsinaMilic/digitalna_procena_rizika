@@ -74,6 +74,16 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice, readOnl
             });
         });
 
+        // Dodaj N/A stavke (danger_level === 0) kao završene
+        // Koristimo allSelections direktno bez dodavanja u dependency array
+        allSelections.forEach((groupSelections) => {
+            groupSelections.forEach(selection => {
+                if (selection.danger_level === 0) {
+                    uniqueCompletedItems.add(selection.risk_id);
+                }
+            });
+        });
+
         completedItems = uniqueCompletedItems.size;
         const completionPercentage = totalItems > 0 ? Math.min(100, Math.round((completedItems / totalItems) * 100)) : 0;
 
@@ -84,6 +94,7 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice, readOnl
             highRiskItems,
             riskCategories
         });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Učitaj postojeće podatke pri inicijalizaciji - samo jednom
@@ -496,6 +507,14 @@ export default function OptimizedRiskAssessment({ procenaId, pravnoLice, readOnl
                             const currentGroupItems = allPrilogMData.get(group.id) || [];
                             currentGroupItems.forEach(item => {
                                 if (groupItemIds.has(item.id)) {
+                                    completedItems++;
+                                }
+                            });
+
+                            // Dodaj N/A stavke za ovu grupu
+                            const groupSelections = allSelections.get(group.id) || [];
+                            groupSelections.forEach(selection => {
+                                if (selection.danger_level === 0 && groupItemIds.has(selection.risk_id)) {
                                     completedItems++;
                                 }
                             });
