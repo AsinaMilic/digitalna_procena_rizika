@@ -1,42 +1,113 @@
-import { Pool } from 'pg';
+import sql from 'mssql';
 
-let pool: Pool | null = null;
+let pool: sql.ConnectionPool | null = null;
 
-export async function getDbConnection() {
+// Azure SQL connection configuration
+const config: sql.config = {
+  server: process.env.AZURE_SQL_SERVER || '',
+  database: process.env.AZURE_SQL_DATABASE || '',
+  user: process.env.AZURE_SQL_USER || '',
+  password: process.env.AZURE_SQL_PASSWORD || '',
+  port: parseInt(process.env.AZURE_SQL_PORT || '1433'),
+  options: {
+    encrypt: true, // Required for Azure
+    trustServerCertificate: false,
+    enableArithAbort: true,
+    connectTimeout: 30000,
+    requestTimeout: 30000,
+  },
+  pool: {
+    max: 10,
+    min: 0,
+    idleTimeoutMillis: 30000,
+  },
+};
+
+async function connectToAzureSQL() {
   if (!pool) {
-    const connectionString = process.env.DATABASE_URL_POSTGRES;
-
-    if (!connectionString) {
-      throw new Error('DATABASE_URL_POSTGRES environment variable is not set');
+    if (!config.server || !config.database || !config.user || !config.password) {
+      throw new Error('Azure SQL connection parameters are not set. Check environment variables.');
     }
 
-    // Connection established to Xata PostgreSQL
-
-    pool = new Pool({
-      connectionString: connectionString,
-      ssl: {
-        rejectUnauthorized: false
-      },
-      max: 10,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 60000,
-    });
-
-    // Postavi UTF-8 kodiranje za sve konekcije
-    pool.on('connect', async (client) => {
-      try {
-        await client.query("SET client_encoding TO 'UTF8'");
-      } catch (err) {
-        console.error('Error setting client encoding:', err);
-      }
-    });
-
-    pool.on('error', (err) => {
-      console.error('Database pool error:', err);
-    });
+    try {
+      pool = await sql.connect(config);
+      console.log('✅ Connected to Azure SQL Database');
+      
+      pool.on('error', (err: Error) => {
+        console.error('Database pool error:', err);
+        pool = null; // Reset pool on error
+      });
+    } catch (error) {
+      console.error('❌ Failed to connect to Azure SQL:', error);
+      throw error;
+    }
   }
 
   return pool;
+}
+
+// Helper function to execute queries with automatic parameter conversion
+export async function executeQuery<T = Record<string, unknown>>(
+  query: string,
+  params?: unknown[]
+): Promise<sql.IResult<T>> {
+  const pool = await connectToAzureSQL();
+  const request = pool.request();
+
+  // Convert PostgreSQL-style $1, $2 parameters to @param1, @param2
+  let azureQuery = query;
+  if (params && params.length > 0) {
+    params.forEach((param, index) => {
+      const paramName = `param${index + 1}`;
+      // Replace $1, $2, etc. with @param1, @param2, etc.
+      azureQuery = azureQuery.replace(
+        new RegExp(`\\$${index + 1}\\b`, 'g'),
+        `@${paramName}`
+      );
+      
+      // Add parameter to request
+      if (param === null || param === undefined) {
+        request.input(paramName, sql.NVarChar, null);
+      } else if (typeof param === 'number') {
+        if (Number.isInteger(param)) {
+          request.input(paramName, sql.Int, param);
+        } else {
+          request.input(paramName, sql.Decimal(15, 2), param);
+        }
+      } else if (typeof param === 'boolean') {
+        request.input(paramName, sql.Bit, param);
+      } else if (param instanceof Date) {
+        request.input(paramName, sql.DateTime2, param);
+      } else {
+        request.input(paramName, sql.NVarChar, String(param));
+      }
+    });
+  }
+
+  return await request.query(azureQuery);
+}
+
+// Compatibility layer for PostgreSQL-style pool.query()
+export class QueryResult<T = Record<string, unknown>> {
+  rows: T[];
+  rowCount: number;
+
+  constructor(result: sql.IResult<T>) {
+    this.rows = result.recordset || [];
+    this.rowCount = result.rowsAffected[0] || 0;
+  }
+}
+
+// Main export - returns a pool-like object with query method for backward compatibility
+export async function getDbConnection() {
+  await connectToAzureSQL();
+  
+  return {
+    query: async <T = Record<string, unknown>>(queryText: string, params?: unknown[]): Promise<QueryResult<T>> => {
+      const result = await executeQuery<T>(queryText, params);
+      return new QueryResult<T>(result);
+    },
+  };
 }
 
 // Kreiranje tabele korisnika sa statusom i automatski admin ako ne postoji
@@ -45,420 +116,95 @@ export async function createUsersTable() {
 
   // Kreiranje tabele korisnika
   await pool.query(`
-      CREATE TABLE IF NOT EXISTS korisnici (
-        id SERIAL PRIMARY KEY,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        lozinka VARCHAR(255) NOT NULL,
-        ime VARCHAR(100) NOT NULL,
-        prezime VARCHAR(100) NOT NULL,
-        status VARCHAR(20) DEFAULT 'na_cekanju' NOT NULL,
-        je_admin BOOLEAN DEFAULT FALSE,
-        datum_kreiranja TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        datum_odobrenja TIMESTAMP NULL,
-        odobrio_admin INTEGER NULL
-      )
-    `);
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='korisnici' AND xtype='U')
+    CREATE TABLE korisnici (
+      id INT IDENTITY(1,1) PRIMARY KEY,
+      email NVARCHAR(255) UNIQUE NOT NULL,
+      lozinka NVARCHAR(255) NOT NULL,
+      ime NVARCHAR(100) NOT NULL,
+      prezime NVARCHAR(100) NOT NULL,
+      status NVARCHAR(20) DEFAULT 'na_cekanju' NOT NULL,
+      je_admin BIT DEFAULT 0,
+      datum_kreiranja DATETIME2 DEFAULT GETDATE(),
+      datum_odobrenja DATETIME2 NULL,
+      odobrio_admin INT NULL
+    )
+  `);
 
   // Proverava da li postoji admin
-  const adminExists = await pool.query(`
-      SELECT COUNT(*) as count FROM korisnici WHERE je_admin = TRUE
-    `);
-  if (parseInt(adminExists.rows[0].count) === 0) {
+  const adminExists = await pool.query<{count: number}>(`
+    SELECT COUNT(*) as count FROM korisnici WHERE je_admin = 1
+  `);
+  
+  if (parseInt(String(adminExists.rows[0].count)) === 0) {
     const bcrypt = await import('bcryptjs');
     const adminPassword = await bcrypt.hash('admin123', 10);
     await pool.query(`
-        INSERT INTO korisnici (email, lozinka, ime, prezime, status, je_admin)
-        VALUES ('admin@admin.com', $1, 'Admin', 'Administrator', 'odobren', TRUE)
-      `, [adminPassword]);
+      INSERT INTO korisnici (email, lozinka, ime, prezime, status, je_admin)
+      VALUES (@param1, @param2, @param3, @param4, @param5, @param6)
+    `, ['admin@admin.com', adminPassword, 'Admin', 'Administrator', 'odobren', true]);
   }
 }
 
 // Kreiranje kompletne šeme baze podataka - briše postojeće podatke!
 export async function initializeDatabase() {
-  const pool = await getDbConnection();
+  const connection = await connectToAzureSQL();
 
   try {
     console.log('🗑️ Dropping existing schema...');
 
-    // Obriši sve tabele i sekvence kompletno
-    await pool.query('DROP SCHEMA IF EXISTS public CASCADE');
-    await pool.query('CREATE SCHEMA public');
-    await pool.query('GRANT ALL ON SCHEMA public TO postgres');
-    await pool.query('GRANT ALL ON SCHEMA public TO public');
+    // Drop all foreign key constraints
+    await connection.request().query(`
+      DECLARE @sql NVARCHAR(MAX) = '';
+      SELECT @sql += 'ALTER TABLE ' + QUOTENAME(OBJECT_SCHEMA_NAME(parent_object_id)) + '.' + 
+                     QUOTENAME(OBJECT_NAME(parent_object_id)) + 
+                     ' DROP CONSTRAINT ' + QUOTENAME(name) + ';'
+      FROM sys.foreign_keys;
+      EXEC sp_executesql @sql;
+    `);
+
+    // Drop all tables
+    await connection.request().query(`
+      DECLARE @sql NVARCHAR(MAX) = '';
+      SELECT @sql += 'DROP TABLE ' + QUOTENAME(TABLE_SCHEMA) + '.' + QUOTENAME(TABLE_NAME) + ';'
+      FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE';
+      EXEC sp_executesql @sql;
+    `);
 
     console.log('🏗️ Creating fresh database schema...');
 
-    // Kreiranje tabele korisnika
-    await pool.query(`
-      CREATE TABLE korisnici (
-        id SERIAL PRIMARY KEY,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        lozinka VARCHAR(255) NOT NULL,
-        ime VARCHAR(100) NOT NULL,
-        prezime VARCHAR(100) NOT NULL,
-        status VARCHAR(20) DEFAULT 'na_cekanju' NOT NULL,
-        je_admin BOOLEAN DEFAULT FALSE,
-        datum_kreiranja TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        datum_odobrenja TIMESTAMP NULL,
-        odobrio_admin INTEGER NULL
-      )
-    `);
+    // Read and execute the schema file
+    const fs = await import('fs');
+    const path = await import('path');
+    const schemaPath = path.join(process.cwd(), 'azure_schema.sql');
+    
+    if (fs.existsSync(schemaPath)) {
+      const schema = fs.readFileSync(schemaPath, 'utf8');
+      const statements = schema.split('GO').filter(s => s.trim());
+      
+      for (const statement of statements) {
+        if (statement.trim()) {
+          await connection.request().query(statement);
+        }
+      }
+    } else {
+      throw new Error('Schema file not found: azure_schema.sql');
+    }
 
-    // Kreiranje tabele PravnoLice
-    await pool.query(`
-      CREATE TABLE PravnoLice (
-        id SERIAL PRIMARY KEY,
-        naziv VARCHAR(255) NOT NULL,
-        skraceno_poslovno_ime VARCHAR(255),
-        pib VARCHAR(20) UNIQUE NOT NULL,
-        maticni_broj VARCHAR(20),
-        adresa VARCHAR(500),
-        adresa_sediste VARCHAR(500),
-        adresa_ostala TEXT,
-        sifra_delatnosti VARCHAR(255),
-        lice_zastupanje TEXT,
-        lice_komunikacija TEXT,
-        tim_procena_rizika TEXT,
-        telefon VARCHAR(50),
-        telefon_faks VARCHAR(100),
-        email VARCHAR(255),
-        internet_adresa VARCHAR(255),
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-    // Kreiranje tabele Usluge
-    await pool.query(`
-      CREATE TABLE Usluge (
-        id SERIAL PRIMARY KEY,
-        pravnoLiceId INTEGER NOT NULL REFERENCES PravnoLice(id) ON DELETE CASCADE,
-        naziv_usluge TEXT NOT NULL,
-        datum_izrade DATE,
-        opis TEXT,
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-    // Kreiranje tabele ProcenaRizika
-    await pool.query(`
-      CREATE TABLE ProcenaRizika (
-        id SERIAL PRIMARY KEY,
-        naziv VARCHAR(255) NOT NULL,
-        opis TEXT,
-        korisnikId INTEGER,
-        pravnoLiceId INTEGER,
-        status VARCHAR(50) DEFAULT 'u_toku',
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (korisnikId) REFERENCES korisnici(id),
-        FOREIGN KEY (pravnoLiceId) REFERENCES PravnoLice(id)
-      )
-    `);
-
-    // Kreiranje tabele RiskSelection
-    await pool.query(`
-      CREATE TABLE RiskSelection (
-        id SERIAL PRIMARY KEY,
-        procenaId INTEGER NOT NULL,
-        riskId VARCHAR(50) NOT NULL,
-        dangerLevel INTEGER NOT NULL,
-        description TEXT,
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (procenaId) REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
-        UNIQUE(procenaId, riskId)
-      )
-    `);
-
-    // Kreiranje tabele PrilogM
-    await pool.query(`
-      CREATE TABLE PrilogM (
-        id SERIAL PRIMARY KEY,
-        procenaId INTEGER NOT NULL,
-        itemId VARCHAR(50) NOT NULL,
-        groupId VARCHAR(50) NOT NULL,
-        requirement TEXT,
-        velicinaOpasnosti INTEGER,
-        izlozenost INTEGER,
-        ranjivost INTEGER,
-        verovatnoca INTEGER,
-        steta INTEGER,
-        kriticnost INTEGER,
-        posledice INTEGER,
-        nivoRizika INTEGER,
-        kategorijaRizika INTEGER,
-        prihvatljivost VARCHAR(50),
-        stepenIzlozenosti INTEGER DEFAULT 3,
-        stepenRanjivosti INTEGER DEFAULT 3,
-        stvarnaSteta DECIMAL(15,2) DEFAULT 0,
-        poslovniPrihodi DECIMAL(15,2) DEFAULT 1000000,
-        vrednostImovine DECIMAL(15,2) DEFAULT 5000000,
-        delatnost VARCHAR(100) DEFAULT 'default',
-        stepenSS INTEGER,
-        stepenVMSH INTEGER,
-        vmshIznos DECIMAL(15,2),
-        opisIdentifikovanihRizika TEXT,
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (procenaId) REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
-        UNIQUE(procenaId, itemId, groupId)
-      )
-    `);
-
-    // Kreiranje tabele FinancialData
-    await pool.query(`
-      CREATE TABLE FinancialData (
-        id SERIAL PRIMARY KEY,
-        procenaId INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
-        poslovniPrihodi BIGINT NOT NULL DEFAULT 1000000,
-        vrednostImovine BIGINT NOT NULL DEFAULT 5000000,
-        delatnost VARCHAR(100) NOT NULL DEFAULT 'default',
-        stvarnaSteta BIGINT NOT NULL DEFAULT 0,
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(procenaId)
-      )
-    `);
-
-    // Kreiranje tabele PrilogLj - za sekcijske opise identifikovanih rizika
-    await pool.query(`
-      CREATE TABLE PrilogLj (
-        id SERIAL PRIMARY KEY,
-        procenaId INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
-        sectionId VARCHAR(50) NOT NULL,
-        groupId VARCHAR(50) NOT NULL,
-        sectionName VARCHAR(255),
-        itemCount INTEGER DEFAULT 0,
-        averageVO INTEGER,
-        opisIdentifikovanihRizika TEXT,
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(procenaId, sectionId, groupId)
-      )
-    `);
-
-    // Kreiranje tabele PrilogMSections - za sekcijske podatke u Prilog M
-    await pool.query(`
-      CREATE TABLE PrilogMSections (
-        id SERIAL PRIMARY KEY,
-        procenaId INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
-        sectionNumber INTEGER NOT NULL,
-        sectionTitle VARCHAR(255) NOT NULL,
-        totalItems INTEGER DEFAULT 0,
-        completedItems INTEGER DEFAULT 0,
-        averageVO DECIMAL(3,2),
-        averageIzlozenost DECIMAL(3,2),
-        averageRanjivost DECIMAL(3,2),
-        averageVerovatnoca DECIMAL(3,2),
-        averagePosledice DECIMAL(3,2),
-        averageSteta DECIMAL(3,2),
-        averageKriticnost DECIMAL(3,2),
-        averageNivoRizika DECIMAL(5,2),
-        dominantnaKategorija INTEGER,
-        prihvatljivostStatus VARCHAR(50),
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(procenaId, sectionNumber)
-      )
-    `);
-
-    // Kreiranje tabele PrilogMSummary - za ukupne podatke na dnu Prilog M
-    await pool.query(`
-      CREATE TABLE PrilogMSummary (
-        id SERIAL PRIMARY KEY,
-        procenaId INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
-        ukupnoStavki INTEGER DEFAULT 0,
-        ukupnoZavrsenih INTEGER DEFAULT 0,
-        ukupanNivoRizika DECIMAL(5,2),
-        ukupnaKategorija INTEGER,
-        ukupnaPrihvatljivost VARCHAR(50),
-        procenatZavrsenosti DECIMAL(5,2),
-        preporuke TEXT,
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(procenaId)
-      )
-    `);
-
-    // Kreiranje tabele PrilogS - karakteristike identifikovanih rizika
-    await pool.query(`
-      CREATE TABLE prilog_s (
-        id SERIAL PRIMARY KEY,
-        procena_id INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
-        group_id INTEGER NOT NULL,
-        item_id INTEGER NOT NULL,
-        vrednost TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(procena_id, group_id, item_id)
-      )
-    `);
-
-    // Kreiranje tabele TabelaF5 - mere za postupanje sa rizicima (Dynamic rows)
-    await pool.query(`
-      CREATE TABLE tabela_f5 (
-        id SERIAL PRIMARY KEY,
-        procena_id INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
-        group_id INTEGER NOT NULL,
-        mera TEXT,
-        opis_i_obrazlozenje TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-    // Kreiranje tabele PrilogFData - Podaci za F.1, F.2, F.3, F.4
-    await pool.query(`
-      CREATE TABLE prilog_f_data (
-        id SERIAL PRIMARY KEY,
-        procena_id INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
-        
-        -- F.1 Podaci o organizaciji koja vrsi procenu
-        f1_podaci_o_organizaciji TEXT,
-        f1_menadzer_rizika TEXT,
-        
-        -- F.2 Podaci o posmatranoj organizaciji
-        f2_podaci_o_posmatranoj_org TEXT,
-        f2_sifra_delatnosti TEXT,
-        f2_odgovorno_lice TEXT,
-        f2_podaci_o_licima TEXT,
-        
-        -- F.3 Kontekst procene rizika (JSON)
-        f3_eksterni_kontekst JSONB,
-        f3_interni_kontekst JSONB,
-        
-        -- F.4 Procena rizika (JSON)
-        f4_identifikacija JSONB,
-        f4_analiza JSONB,
-        f4_vrednovanje JSONB,
-        
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(procena_id)
-      )
-    `);
-
-    // Kreiranje tabele PrilogB1 - Uticaj delatnosti
-    await pool.query(`
-      CREATE TABLE prilog_b1 (
-        id SERIAL PRIMARY KEY,
-        procena_id INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
-        group_id INTEGER NOT NULL,
-        uticaj DECIMAL(5,2) DEFAULT 0,
-        iud DECIMAL(5,4),
-        vk INTEGER,
-        k INTEGER,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(procena_id, group_id)
-      )
-    `);
-
-    // Kreiranje tabele PrilogT - Ocena resursa
-    await pool.query(`
-      CREATE TABLE prilog_t (
-        id SERIAL PRIMARY KEY,
-        procena_id INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
-        kapital_score INTEGER,
-        menadzeri_score INTEGER,
-        osiguranje_score INTEGER,
-        registar_score INTEGER,
-        zarada_score INTEGER,
-        prosek_resursa DECIMAL(5,2),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(procena_id)
-      )
-    `);
-
-    // Kreiranje tabele PrilogCh - Matrica za ocenjivanje
-    await pool.query(`
-      CREATE TABLE prilog_ch (
-        id SERIAL PRIMARY KEY,
-        procena_id INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
-        zahtev_a INTEGER,
-        zahtev_b INTEGER,
-        zahtev_v INTEGER,
-        zahtev_g INTEGER,
-        zahtev_d INTEGER,
-        zahtev_dj INTEGER,
-        final_score DECIMAL(5,2),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(procena_id)
-      )
-    `);
-
-    // Kreiranje tabele PrilogU - Kvalifikovanost menadzera rizika
-    await pool.query(`
-      CREATE TABLE prilog_u (
-        id SERIAL PRIMARY KEY,
-        procena_id INTEGER NOT NULL REFERENCES ProcenaRizika(id) ON DELETE CASCADE,
-        zahtev_a INTEGER,
-        zahtev_b INTEGER,
-        zahtev_v INTEGER,
-        zahtev_g INTEGER,
-        zahtev_d INTEGER,
-        final_score DECIMAL(5,2),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(procena_id)
-      )
-    `);
-
-    // Kreiranje tabele OrganizacijaProceneRizika - Podaci o organizaciji koja vrši procenu
-    await pool.query(`
-      CREATE TABLE OrganizacijaProceneRizika (
-        id SERIAL PRIMARY KEY,
-        pravnoLiceId INTEGER NOT NULL REFERENCES PravnoLice(id) ON DELETE CASCADE,
-        
-        -- a) Podaci o organizaciji
-        poslovno_ime VARCHAR(255) DEFAULT 'SECURITAS SERVICES d.o.o.',
-        adresa_sediste VARCHAR(500) DEFAULT 'Autoput za Zagreb br. 18, 11080 Beograd, Zemun',
-        maticni_broj VARCHAR(20) DEFAULT '17487809',
-        pib VARCHAR(20) DEFAULT '102941341',
-        broj_licence VARCHAR(100) DEFAULT '03.15.3 broj 6025 od 03.11.2021. godine',
-        
-        -- b) Menadžer rizika - vođa tima
-        menadzer_ime VARCHAR(255) DEFAULT 'Lazar Mladinović, dipl. inž. ZOP i specijalista kriminalista',
-        menadzer_licence VARCHAR(100) DEFAULT '03.27 broj 20771 od 18.07.2022. godine',
-        
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(pravnoLiceId)
-      )
-    `);
-
-    // Kreiranje tabele ClanoviTimaProceneRizika - Članovi tima za procenu rizika
-    await pool.query(`
-      CREATE TABLE ClanoviTimaProceneRizika (
-        id SERIAL PRIMARY KEY,
-        organizacijaId INTEGER NOT NULL REFERENCES OrganizacijaProceneRizika(id) ON DELETE CASCADE,
-        ime VARCHAR(255) NOT NULL,
-        broj_licence VARCHAR(100) NOT NULL,
-        redni_broj INTEGER DEFAULT 1,
-        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-    // Kreiranje indeksa
-    await pool.query(`
-      CREATE INDEX idx_pravno_lice_maticni_broj ON PravnoLice(maticni_broj);
-      CREATE INDEX idx_pravno_lice_pib ON PravnoLice(pib);
-      CREATE INDEX idx_pravno_lice_sifra_delatnosti ON PravnoLice(sifra_delatnosti);
-      CREATE INDEX idx_financial_data_procena ON FinancialData(procenaId);
-    `);
-
-    // Kreiranje default admin korisnika
+    // Create default admin user
     const bcrypt = await import('bcryptjs');
     const adminPassword = await bcrypt.hash('admin123', 10);
-    await pool.query(`
-      INSERT INTO korisnici (email, lozinka, ime, prezime, status, je_admin)
-      VALUES ('admin@admin.com', $1, 'Admin', 'Administrator', 'odobren', TRUE)
-    `, [adminPassword]);
+    await connection.request()
+      .input('email', sql.NVarChar, 'admin@admin.com')
+      .input('lozinka', sql.NVarChar, adminPassword)
+      .input('ime', sql.NVarChar, 'Admin')
+      .input('prezime', sql.NVarChar, 'Administrator')
+      .input('status', sql.NVarChar, 'odobren')
+      .input('je_admin', sql.Bit, true)
+      .query(`
+        INSERT INTO korisnici (email, lozinka, ime, prezime, status, je_admin)
+        VALUES (@email, @lozinka, @ime, @prezime, @status, @je_admin)
+      `);
 
     console.log('✅ Database schema initialized successfully');
     console.log('👤 Default admin created: admin@admin.com / admin123');
@@ -474,4 +220,11 @@ export async function createRiskAssessmentTables() {
   return initializeDatabase();
 }
 
-
+// Close the connection pool
+export async function closeConnection() {
+  if (pool) {
+    await pool.close();
+    pool = null;
+    console.log('Database connection closed');
+  }
+}

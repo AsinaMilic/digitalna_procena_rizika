@@ -47,12 +47,12 @@ export async function POST(
         const pool = await getDbConnection();
 
         // 1. Get Resource Score from Prilog T
-        const tResult = await pool.query(`
+        const tResult = await pool.query<{prosek_resursa: number}>(`
             SELECT prosek_resursa FROM prilog_t 
             WHERE procena_id = $1
         `, [procenaId]);
 
-        const resourceScore = tResult.rows[0]?.prosek_resursa || 0;
+        const resourceScore = Number(tResult.rows[0]?.prosek_resursa || 0);
 
         // 2. Calculate Final Score
         // Formula: Sum(Fulfillment * ResourceScore) / 6 (items) -> Or explicitly following the table logic
@@ -63,7 +63,7 @@ export async function POST(
         const fulfillments = [zahtev_a, zahtev_b, zahtev_v, zahtev_g, zahtev_d, zahtev_dj];
         // Filter out nulls if necessary, but standard seems to require all filled. Assume null=0 if missing.
 
-        const validFulfillments = fulfillments.map(f => f ?? 0);
+        const validFulfillments = fulfillments.map(f => Number(f ?? 0));
 
         // Calculate individual row scores
         const rowScores = validFulfillments.map(f => f * resourceScore);

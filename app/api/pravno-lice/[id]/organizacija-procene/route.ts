@@ -28,13 +28,18 @@ export async function GET(
 
         // Ako ne postoji, kreiraj sa default vrednostima
         if (!organizacija) {
-            const createResult = await pool.query(
+            await pool.query(
                 `INSERT INTO OrganizacijaProceneRizika (pravnoLiceId) 
-         VALUES ($1) 
-         RETURNING *`,
+         VALUES ($1)`,
                 [pravnoLiceId]
             );
-            organizacija = createResult.rows[0];
+            
+            // Fetch the created record
+            const newOrgResult = await pool.query(
+                `SELECT * FROM OrganizacijaProceneRizika WHERE pravnoLiceId = $1`,
+                [pravnoLiceId]
+            );
+            organizacija = newOrgResult.rows[0];
 
             // Dodaj default članove tima
             await pool.query(
@@ -85,34 +90,71 @@ export async function POST(
 
         const pool = await getDbConnection();
 
-        // Ažuriraj ili kreiraj organizaciju
-        const orgResult = await pool.query(
-            `INSERT INTO OrganizacijaProceneRizika (
-        pravnoLiceId, poslovno_ime, adresa_sediste, maticni_broj, pib, 
-        broj_licence, menadzer_ime, menadzer_licence
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      ON CONFLICT (pravnoLiceId) DO UPDATE SET
-        poslovno_ime = $2,
-        adresa_sediste = $3,
-        maticni_broj = $4,
-        pib = $5,
-        broj_licence = $6,
-        menadzer_ime = $7,
-        menadzer_licence = $8,
-        updatedAt = CURRENT_TIMESTAMP
-      RETURNING *`,
-            [
-                pravnoLiceId,
-                data.organizacija.poslovno_ime,
-                data.organizacija.adresa_sediste,
-                data.organizacija.maticni_broj,
-                data.organizacija.pib,
-                data.organizacija.broj_licence,
-                data.organizacija.menadzer_ime,
-                data.organizacija.menadzer_licence
-            ]
+        // Check if organization exists
+        const existsResult = await pool.query(
+            `SELECT id FROM OrganizacijaProceneRizika WHERE pravnoLiceId = $1`,
+            [pravnoLiceId]
         );
 
+        let organizacijaId;
+
+        if (existsResult.rows.length > 0) {
+            // Update existing
+            organizacijaId = existsResult.rows[0].id;
+            await pool.query(
+                `UPDATE OrganizacijaProceneRizika SET
+          poslovno_ime = $1,
+          adresa_sediste = $2,
+          maticni_broj = $3,
+          pib = $4,
+          broj_licence = $5,
+          menadzer_ime = $6,
+          menadzer_licence = $7,
+          updatedAt = GETDATE()
+        WHERE pravnoLiceId = $8`,
+                [
+                    data.organizacija.poslovno_ime,
+                    data.organizacija.adresa_sediste,
+                    data.organizacija.maticni_broj,
+                    data.organizacija.pib,
+                    data.organizacija.broj_licence,
+                    data.organizacija.menadzer_ime,
+                    data.organizacija.menadzer_licence,
+                    pravnoLiceId
+                ]
+            );
+        } else {
+            // Insert new
+            await pool.query(
+                `INSERT INTO OrganizacijaProceneRizika (
+          pravnoLiceId, poslovno_ime, adresa_sediste, maticni_broj, pib, 
+          broj_licence, menadzer_ime, menadzer_licence
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                [
+                    pravnoLiceId,
+                    data.organizacija.poslovno_ime,
+                    data.organizacija.adresa_sediste,
+                    data.organizacija.maticni_broj,
+                    data.organizacija.pib,
+                    data.organizacija.broj_licence,
+                    data.organizacija.menadzer_ime,
+                    data.organizacija.menadzer_licence
+                ]
+            );
+            
+            // Get the created record
+            const newOrgResult = await pool.query(
+                `SELECT id FROM OrganizacijaProceneRizika WHERE pravnoLiceId = $1`,
+                [pravnoLiceId]
+            );
+            organizacijaId = newOrgResult.rows[0].id;
+        }
+
+        // Fetch the organization
+        const orgResult = await pool.query(
+            `SELECT * FROM OrganizacijaProceneRizika WHERE id = $1`,
+            [organizacijaId]
+        );
         const organizacija = orgResult.rows[0];
 
         // Obriši postojeće članove tima

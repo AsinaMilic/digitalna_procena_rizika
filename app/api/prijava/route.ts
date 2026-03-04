@@ -2,6 +2,7 @@ import {NextRequest, NextResponse} from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import {getDbConnection} from '../../../lib/db';
+import type {Korisnik} from '../../../lib/db-types';
 
 export async function POST(request: NextRequest) {
     try {
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
         const pool = await getDbConnection();
 
         // Pronalaženje korisnika
-        const result = await pool.query('SELECT * FROM korisnici WHERE email = $1', [email]);
+        const result = await pool.query<Korisnik>('SELECT * FROM korisnici WHERE email = $1', [email]);
 
         if (result.rows.length === 0) {
             return NextResponse.json(

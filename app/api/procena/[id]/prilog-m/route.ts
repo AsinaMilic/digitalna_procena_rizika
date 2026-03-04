@@ -189,9 +189,6 @@ export async function GET(
     const data = await executeWithRetry(async () => {
       const pool = await getDbConnection();
 
-      // Postavi UTF-8 kodiranje za ovu sesiju
-      await pool.query("SET client_encoding TO 'UTF8'");
-
       const result = await pool.query(`
           SELECT 
             itemId as id, groupId, requirement, velicinaOpasnosti, izlozenost, ranjivost,
@@ -362,7 +359,7 @@ export async function PUT(
       completionPercentage: totalItems > 0 ? 100 : 0, // Ako imamo podatke, znači da je završeno
       highRiskItems: riskCategories[1] + riskCategories[2], // PRVA + DRUGA kategorija
       averageRiskLevel: totalItems > 0
-        ? Math.round(data.reduce((sum, item) => sum + (item.nivoRizika || 0), 0) / totalItems * 100) / 100
+        ? Math.round(data.reduce((sum, item) => sum + (Number(item.nivoRizika) || 0), 0) / totalItems * 100) / 100
         : 0
     };
 

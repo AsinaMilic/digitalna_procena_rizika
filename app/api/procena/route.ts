@@ -17,8 +17,8 @@ export async function GET() {
                 pl.pib,
                 pl.adresa,
                 -- Statistike za svaku procenu iz PrilogM tabele
-                (SELECT COUNT(*)::integer FROM PrilogM pm WHERE pm.procenaId = pr.id) as ukupnoRizika,
-                (SELECT COUNT(*)::integer FROM PrilogM pm WHERE pm.procenaId = pr.id AND pm.kategorijaRizika IN (1, 2)) as visokoRizicniRizici
+                (SELECT COUNT(*) FROM PrilogM pm WHERE pm.procenaId = pr.id) as ukupnoRizika,
+                (SELECT COUNT(*) FROM PrilogM pm WHERE pm.procenaId = pr.id AND pm.kategorijaRizika IN (1, 2)) as visokoRizicniRizici
             FROM ProcenaRizika pr
             INNER JOIN PravnoLice pl ON pr.pravnoLiceId = pl.id
             ORDER BY pr.createdAt DESC
@@ -71,13 +71,20 @@ export async function POST(request: NextRequest) {
         const pravnoLiceNaziv = pravnoLiceResult.rows[0].naziv;
 
         // Kreiraj novu procenu
-        const result = await pool.query(`
+        await pool.query(`
                 INSERT INTO ProcenaRizika (naziv, pravnoLiceId, status)
                 VALUES ($1, $2, 'u_toku')
-                RETURNING id, createdAt, status
             `, [`Procena rizika - ${pravnoLiceNaziv}`, pravnoLiceId]);
 
-        const novaProcena = result.rows[0];
+        // Get the inserted record
+        const idResult = await pool.query('SELECT SCOPE_IDENTITY() as id');
+        const procenaId = idResult.rows[0].id;
+        
+        const procenaResult = await pool.query(`
+            SELECT id, createdAt, status FROM ProcenaRizika WHERE id = $1
+        `, [procenaId]);
+        
+        const novaProcena = procenaResult.rows[0];
 
         return NextResponse.json({
             success: true,
@@ -105,13 +112,18 @@ export async function PUT(request: NextRequest) {
         const pool = await getDbConnection();
 
         // Ažuriraj procenu sa novim podacima
-        const result = await pool.query(`
+        await pool.query(`
             UPDATE ProcenaRizika 
-            SET naziv_usluge = $1, datum_izrade = $2, updatedAt = CURRENT_TIMESTAMP
+            SET naziv_usluge = $1, datum_izrade = $2, updatedAt = GETDATE()
             WHERE id = $3
-            RETURNING id, naziv_usluge, datum_izrade, 
-                     datum_izrade + INTERVAL '3 years' as rok_vazenja
         `, [naziv_usluge, datum_izrade, procenaId]);
+
+        // Fetch the updated record
+        const result = await pool.query(`
+            SELECT id, naziv_usluge, datum_izrade,
+                   DATEADD(year, 3, datum_izrade) as rok_vazenja
+            FROM ProcenaRizika WHERE id = $1
+        `, [procenaId]);
 
         if (result.rows.length === 0) {
             return NextResponse.json(

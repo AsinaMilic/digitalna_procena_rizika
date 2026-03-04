@@ -52,39 +52,23 @@ export async function DELETE(
         const procenaId = id;
         const pool = await getDbConnection();
 
-        // Start transaction
-        const client = await pool.connect();
+        // Delete related data (CASCADE delete will handle related records)
+        await pool.query('DELETE FROM RiskSelection WHERE procenaId = $1', [procenaId]);
 
-        try {
-            await client.query('BEGIN');
+        // Delete main assessment
+        const result = await pool.query('DELETE FROM ProcenaRizika WHERE id = $1', [procenaId]);
 
-            // Delete related data (PrilogM has CASCADE delete, so it will be deleted automatically)
-            await client.query('DELETE FROM RiskSelection WHERE procenaId = $1', [procenaId]);
-
-            // Delete main assessment
-            const result = await client.query('DELETE FROM ProcenaRizika WHERE id = $1', [procenaId]);
-
-            if (result.rowCount === 0) {
-                await client.query('ROLLBACK');
-                return NextResponse.json(
-                    { error: 'Procena nije pronađena' },
-                    { status: 404 }
-                );
-            }
-
-            await client.query('COMMIT');
-
-            return NextResponse.json({
-                success: true,
-                message: 'Procena je uspešno obrisana'
-            });
-
-        } catch (error) {
-            await client.query('ROLLBACK');
-            throw error;
-        } finally {
-            client.release();
+        if (result.rowCount === 0) {
+            return NextResponse.json(
+                { error: 'Procena nije pronađena' },
+                { status: 404 }
+            );
         }
+
+        return NextResponse.json({
+            success: true,
+            message: 'Procena je uspešno obrisana'
+        });
 
     } catch (error) {
         console.error('Greška pri brisanju procene:', error);

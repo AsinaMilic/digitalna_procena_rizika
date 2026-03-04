@@ -6,19 +6,8 @@ export async function POST(req: Request) {
     try {
         const {
             naziv,
-            skraceno_poslovno_ime,
             pib,
-            maticni_broj,
-            adresa_sediste,
-            adresa_ostala,
-            sifra_delatnosti,
-            lice_zastupanje,
-            lice_komunikacija,
-            tim_procena_rizika,
-            telefon_faks,
-            internet_adresa,
-            // Zadržavamo staru adresu za kompatibilnost
-            adresa
+            maticni_broj
         } = await req.json();
 
         if (!naziv || !pib) {
@@ -46,55 +35,20 @@ export async function POST(req: Request) {
             }
         }
 
-        // Insert pravno lice
-        const pravnoLiceResult = await pool.query(`
-                INSERT INTO PravnoLice (
-                    naziv, 
-                    skraceno_poslovno_ime,
-                    pib, 
-                    maticni_broj,
-                    adresa,
-                    adresa_sediste,
-                    adresa_ostala,
-                    sifra_delatnosti,
-                    lice_zastupanje,
-                    lice_komunikacija,
-                    tim_procena_rizika,
-                    telefon,
-                    telefon_faks,
-                    internet_adresa,
-                    email
-                ) 
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-                RETURNING id
-            `, [
-            naziv,
-            skraceno_poslovno_ime || null,
-            pib,
-            maticni_broj || null,
-            adresa || adresa_sediste || null, // Kompatibilnost sa starom adresom
-            adresa_sediste || null,
-            adresa_ostala || null,
-            sifra_delatnosti || null,
-            lice_zastupanje || null,
-            lice_komunikacija || null,
-            tim_procena_rizika || null,
-            telefon_faks || null, // Stara kolona telefon
-            telefon_faks || null,
-            internet_adresa || null,
-            null // email - zadržavamo null za sada
-        ]);
 
-        const pravnoLiceId = pravnoLiceResult.rows[0].id;
+        // Get the inserted ID using SCOPE_IDENTITY()
+        const idResult = await pool.query('SELECT SCOPE_IDENTITY() as id');
+        const pravnoLiceId = idResult.rows[0].id;
 
         // Create new risk assessment for this legal entity
-        const procenaResult = await pool.query(`
+        await pool.query(`
                 INSERT INTO ProcenaRizika (naziv, pravnoLiceId, status) 
                 VALUES ($1, $2, $3)
-                RETURNING id
             `, [`Procena rizika - ${naziv}`, pravnoLiceId, 'u_toku']);
 
-        const procenaId = procenaResult.rows[0].id;
+        // Get the inserted procena ID
+        const procenaIdResult = await pool.query('SELECT SCOPE_IDENTITY() as id');
+        const procenaId = procenaIdResult.rows[0].id;
 
         return NextResponse.json({
             success: true,
@@ -209,16 +163,19 @@ export async function PUT(req: Request) {
         const pool = await getDbConnection();
 
         // Dodaj novu uslugu
-        const result = await pool.query(`
+        await pool.query(`
             INSERT INTO Usluge (pravnoLiceId, naziv_usluge, datum_izrade, opis)
             VALUES ($1, $2, $3, $4)
-            RETURNING id
         `, [pravnoLiceId, naziv_usluge, datum_izrade || new Date().toISOString().split('T')[0], opis || null]);
+
+        // Get the inserted ID
+        const idResult = await pool.query('SELECT SCOPE_IDENTITY() as id');
+        const uslugaId = idResult.rows[0].id;
 
         return NextResponse.json({
             success: true,
             message: "Usluga je uspešno dodana",
-            uslugaId: result.rows[0].id
+            uslugaId: uslugaId
         });
     } catch (error) {
         return handleApiError(error, "dodavanje usluge");

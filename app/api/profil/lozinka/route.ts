@@ -33,7 +33,7 @@ export async function PUT(request: NextRequest) {
         const pool = await getDbConnection();
 
         // Pronađi korisnika
-        const korisnikResult = await pool.query('SELECT id, lozinka FROM korisnici WHERE id = $1', [decoded.id]);
+        const korisnikResult = await pool.query<{id: number; lozinka: string}>('SELECT id, lozinka FROM korisnici WHERE id = $1', [decoded.id]);
 
         if (korisnikResult.rows.length === 0) {
             return NextResponse.json({ greška: 'Korisnik nije pronađen' }, { status: 404 });

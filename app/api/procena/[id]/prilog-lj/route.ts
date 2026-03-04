@@ -44,9 +44,6 @@ export async function GET(
     const data = await executeWithRetry(async () => {
       const pool = await getDbConnection();
 
-      // Postavi UTF-8 kodiranje za ovu sesiju
-      await pool.query("SET client_encoding TO 'UTF8'");
-
       const result = await pool.query(`
           SELECT 
             sectionId as "sectionId", 

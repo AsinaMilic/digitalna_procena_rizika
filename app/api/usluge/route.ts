@@ -37,9 +37,8 @@ export async function PUT(req: Request) {
 
         const result = await pool.query(`
             UPDATE Usluge 
-            SET naziv_usluge = $1, datum_izrade = $2, opis = $3, updatedAt = CURRENT_TIMESTAMP
+            SET naziv_usluge = $1, datum_izrade = $2, opis = $3, updatedAt = GETDATE()
             WHERE id = $4
-            RETURNING id
         `, [naziv_usluge, datum_izrade, opis, id]);
 
         if (result.rowCount === 0) {

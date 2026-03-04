@@ -72,13 +72,19 @@ export async function GET(
       });
     }
 
-    // PostgreSQL vraća nazive kolona u malim slovima
-    const data = result.rows[0];
+    // Azure SQL column names are case-sensitive
+    const data = result.rows[0] as {
+      poslovniPrihodi?: number | string;
+      vrednostImovine?: number | string;
+      delatnost?: string;
+      stvarnaSteta?: number | string;
+    };
+    
     return NextResponse.json({
-      poslovniPrihodi: parseInt(data.poslovniprihodi || '0'),
-      vrednostImovine: parseInt(data.vrednostimovine || '0'),
+      poslovniPrihodi: typeof data.poslovniPrihodi === 'number' ? data.poslovniPrihodi : parseInt(String(data.poslovniPrihodi || '0')),
+      vrednostImovine: typeof data.vrednostImovine === 'number' ? data.vrednostImovine : parseInt(String(data.vrednostImovine || '0')),
       delatnost: data.delatnost || 'default',
-      stvarnaSteta: parseInt(data.stvarnasteta || '0')
+      stvarnaSteta: typeof data.stvarnaSteta === 'number' ? data.stvarnaSteta : parseInt(String(data.stvarnaSteta || '0'))
     });
 
   } catch (error) {
