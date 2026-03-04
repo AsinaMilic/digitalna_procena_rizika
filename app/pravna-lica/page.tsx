@@ -80,8 +80,8 @@ export default function PravnaLicaPage() {
             });
 
             if (response.ok) {
-                const data = await response.json();
-                setPravnaLica(data);
+                const result = await response.json();
+                setPravnaLica(result.data);
             } else {
                 setError('Greška pri učitavanju pravnih lica');
             }

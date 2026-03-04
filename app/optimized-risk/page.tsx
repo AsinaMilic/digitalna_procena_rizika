@@ -27,8 +27,8 @@ export default function OptimizedRiskPage() {
             try {
                 const response = await fetch('/api/pravno-lice');
                 if (response.ok) {
-                    const data = await response.json();
-                    setExistingPravnaLica(data);
+                    const result = await response.json();
+                    setExistingPravnaLica(result.data);
                 }
             } catch (error) {
                 console.error('Error fetching entities:', error);
