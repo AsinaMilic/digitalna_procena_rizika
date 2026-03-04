@@ -23,7 +23,7 @@ export async function GET(
                     pl.adresa
                 FROM ProcenaRizika pr
                 INNER JOIN PravnoLice pl ON pr.pravnoLiceId = pl.id
-                WHERE pr.id = $1
+                WHERE pr.id = @param1
             `, [procenaId]);
 
         if (result.rows.length === 0) {
@@ -33,7 +33,11 @@ export async function GET(
             );
         }
 
-        return NextResponse.json(result.rows[0]);
+        return NextResponse.json(result.rows[0], {
+            headers: {
+                'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60'
+            }
+        });
     } catch (error) {
         console.error('Greška pri dobijanju procene:', error);
         return NextResponse.json(

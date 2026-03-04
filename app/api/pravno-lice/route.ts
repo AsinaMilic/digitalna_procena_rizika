@@ -164,6 +164,10 @@ export async function GET(req: Request) {
                 total: Number(total),
                 totalPages: Math.ceil(Number(total) / limit)
             }
+        }, {
+            headers: {
+                'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60'
+            }
         });
     } catch (error) {
         return handleApiError(error, "dohvatanje pravnih lica");

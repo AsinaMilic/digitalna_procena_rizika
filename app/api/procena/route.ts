@@ -24,7 +24,11 @@ export async function GET() {
             ORDER BY pr.createdAt DESC
         `);
 
-        return NextResponse.json(result.rows);
+        return NextResponse.json(result.rows, {
+            headers: {
+                'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60'
+            }
+        });
     } catch (error) {
         return handleApiError(error, "dobijanje procena");
     }

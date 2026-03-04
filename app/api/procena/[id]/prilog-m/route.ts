@@ -58,92 +58,63 @@ export async function POST(
     await executeWithRetry(async () => {
       const pool = await getDbConnection();
 
-      // Check if procena exists
-      const procenaCheck = await pool.query('SELECT id FROM ProcenaRizika WHERE id = $1', [procenaId]);
-
-      if (procenaCheck.rows.length === 0) {
-        throw new Error("Procena ne postoji");
-      }
-
-      // Check if PrilogM record already exists
-      const existingRecord = await pool.query('SELECT id FROM PrilogM WHERE procenaId = $1 AND itemId = $2 AND groupId = $3', [procenaId, prilogMItem.id, prilogMItem.groupId]);
-
       // Izračunaj dodatne vrednosti prema standardu
-      const stepenSS = calculateStvarnaSteta(0, 1000000); // Default vrednosti - treba proširiti
+      const stepenSS = calculateStvarnaSteta(0, 1000000);
       const { vmsh, stepenVMSH } = calculateVerovatnoMaksimalnaSteta(5000000, prilogMItem.velicinaOpasnosti || 3, 'default');
 
-      if (existingRecord.rows.length > 0) {
-        // Update existing record
-        await pool.query(`
-            UPDATE PrilogM SET
-              requirement = $1,
-              velicinaOpasnosti = $2,
-              izlozenost = $3,
-              ranjivost = $4,
-              verovatnoca = $5,
-              steta = $6,
-              kriticnost = $7,
-              posledice = $8,
-              nivoRizika = $9,
-              kategorijaRizika = $10,
-              prihvatljivost = $11,
-              stepenSS = $12,
-              stepenVMSH = $13,
-              vmshIznos = $14,
-              opisIdentifikovanihRizika = $15,
-              updatedAt = CURRENT_TIMESTAMP
-            WHERE procenaId = $16 AND itemId = $17 AND groupId = $18
-          `, [
-          prilogMItem.requirement || '',
-          prilogMItem.velicinaOpasnosti,
-          prilogMItem.izlozenost,
-          prilogMItem.ranjivost,
-          prilogMItem.verovatnoca,
-          prilogMItem.steta,
-          prilogMItem.kriticnost,
-          prilogMItem.posledice,
-          prilogMItem.nivoRizika,
-          prilogMItem.kategorijaRizika,
-          prilogMItem.prihvatljivost,
-          stepenSS,
-          stepenVMSH,
-          vmsh,
-          prilogMItem.opisIdentifikovanihRizika || null,
-          procenaId,
-          prilogMItem.id,
-          prilogMItem.groupId
-        ]);
-      } else {
-        // Create new record
-        await pool.query(`
-            INSERT INTO PrilogM (
-              procenaId, itemId, groupId, requirement, velicinaOpasnosti, izlozenost, ranjivost,
-              verovatnoca, steta, kriticnost, posledice, nivoRizika, kategorijaRizika, prihvatljivost,
-              stepenSS, stepenVMSH, vmshIznos, opisIdentifikovanihRizika, createdAt, updatedAt
-            ) VALUES (
-              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-            )
-          `, [
-          procenaId,
-          prilogMItem.id,
-          prilogMItem.groupId,
-          prilogMItem.requirement || '',
-          prilogMItem.velicinaOpasnosti,
-          prilogMItem.izlozenost,
-          prilogMItem.ranjivost,
-          prilogMItem.verovatnoca,
-          prilogMItem.steta,
-          prilogMItem.kriticnost,
-          prilogMItem.posledice,
-          prilogMItem.nivoRizika,
-          prilogMItem.kategorijaRizika,
-          prilogMItem.prihvatljivost,
-          stepenSS,
-          stepenVMSH,
-          vmsh,
-          prilogMItem.opisIdentifikovanihRizika || null
-        ]);
-      }
+      // UPSERT in single query - combine check + insert/update
+      await pool.query(`
+        IF EXISTS (SELECT 1 FROM PrilogM WHERE procenaId = @param1 AND itemId = @param2 AND groupId = @param3)
+        BEGIN
+          UPDATE PrilogM SET
+            requirement = @param4,
+            velicinaOpasnosti = @param5,
+            izlozenost = @param6,
+            ranjivost = @param7,
+            verovatnoca = @param8,
+            steta = @param9,
+            kriticnost = @param10,
+            posledice = @param11,
+            nivoRizika = @param12,
+            kategorijaRizika = @param13,
+            prihvatljivost = @param14,
+            stepenSS = @param15,
+            stepenVMSH = @param16,
+            vmshIznos = @param17,
+            opisIdentifikovanihRizika = @param18,
+            updatedAt = CURRENT_TIMESTAMP
+          WHERE procenaId = @param1 AND itemId = @param2 AND groupId = @param3
+        END
+        ELSE
+        BEGIN
+          INSERT INTO PrilogM (
+            procenaId, itemId, groupId, requirement, velicinaOpasnosti, izlozenost, ranjivost,
+            verovatnoca, steta, kriticnost, posledice, nivoRizika, kategorijaRizika, prihvatljivost,
+            stepenSS, stepenVMSH, vmshIznos, opisIdentifikovanihRizika, createdAt, updatedAt
+          ) VALUES (
+            @param1, @param2, @param3, @param4, @param5, @param6, @param7, @param8, @param9, @param10, @param11, @param12, @param13, @param14, @param15, @param16, @param17, @param18, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+          )
+        END
+      `, [
+        procenaId,
+        prilogMItem.id,
+        prilogMItem.groupId,
+        prilogMItem.requirement || '',
+        prilogMItem.velicinaOpasnosti,
+        prilogMItem.izlozenost,
+        prilogMItem.ranjivost,
+        prilogMItem.verovatnoca,
+        prilogMItem.steta,
+        prilogMItem.kriticnost,
+        prilogMItem.posledice,
+        prilogMItem.nivoRizika,
+        prilogMItem.kategorijaRizika,
+        prilogMItem.prihvatljivost,
+        stepenSS,
+        stepenVMSH,
+        vmsh,
+        prilogMItem.opisIdentifikovanihRizika || null
+      ]);
     });
 
     console.log(`✅ Prilog M podatak sačuvan za procenu ${procenaId}:`, {
@@ -195,13 +166,17 @@ export async function GET(
             verovatnoca, steta, kriticnost, posledice, nivoRizika, kategorijaRizika, prihvatljivost,
             stepenSS, stepenVMSH, vmshIznos, opisIdentifikovanihRizika
           FROM PrilogM 
-          WHERE procenaId = $1
+          WHERE procenaId = @param1
           ORDER BY groupId, itemId
         `, [procenaId]);
       return result.rows;
     });
 
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300'
+      }
+    });
 
   } catch (error) {
     console.error('Greška pri učitavanju Prilog M podataka:', error);
