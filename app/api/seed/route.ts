@@ -16,6 +16,14 @@ const GRUPE = [
 ];
 
 export async function POST() {
+    // Disable in production for security
+    if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json(
+            { error: 'Endpoint disabled in production' },
+            { status: 403 }
+        );
+    }
+
     try {
         const pool = await getDbConnection();
         

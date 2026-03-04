@@ -17,9 +17,10 @@ const config: sql.config = {
     requestTimeout: 30000,
   },
   pool: {
-    max: 10,
-    min: 0,
-    idleTimeoutMillis: 30000,
+    max: 4,
+    min: 1,
+    idleTimeoutMillis: 60000,
+    acquireTimeoutMillis: 30000,
   },
 };
 

@@ -60,9 +60,18 @@ export async function POST(req: Request) {
     }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
+        const url = new URL(req.url);
+        const page = parseInt(url.searchParams.get('page') || '1');
+        const limit = parseInt(url.searchParams.get('limit') || '20');
+        const offset = (page - 1) * limit;
+
         const pool = await getDbConnection();
+
+        // Get total count first
+        const countResult = await pool.query('SELECT COUNT(*) as total FROM PravnoLice');
+        const total = countResult.rows[0].total;
 
         const result = await pool.query(`
             SELECT 
@@ -93,7 +102,8 @@ export async function GET() {
             LEFT JOIN ProcenaRizika pr ON pl.id = pr.pravnoLiceId
             LEFT JOIN Usluge u ON pl.id = u.pravnoLiceId
             ORDER BY pl.id, pr.createdAt DESC, u.createdAt DESC
-        `);
+            OFFSET @param1 ROWS FETCH NEXT @param2 ROWS ONLY
+        `, [offset, limit]);
 
         // Group the results by pravno lice
         const pravnaLicaMap = new Map();
@@ -146,7 +156,15 @@ export async function GET() {
         });
 
         const pravnaLica = Array.from(pravnaLicaMap.values());
-        return NextResponse.json(pravnaLica);
+        return NextResponse.json({
+            data: pravnaLica,
+            pagination: {
+                page,
+                limit,
+                total: Number(total),
+                totalPages: Math.ceil(Number(total) / limit)
+            }
+        });
     } catch (error) {
         return handleApiError(error, "dohvatanje pravnih lica");
     }
